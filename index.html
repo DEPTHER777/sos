@@ -1,0 +1,3538 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>PulseLink — Optical &amp; Audio Binary Communication System</title>
+<style>
+:root {
+  --bg: #0b0f17;
+  --bg-elevated: #131a26;
+  --bg-card: #182131;
+  --bg-input: #0e1420;
+  --border: #26334a;
+  --border-strong: #354766;
+  --text: #eef3fb;
+  --text-muted: #93a4bf;
+  --text-dim: #667794;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-glow: rgba(59, 130, 246, 0.35);
+  --optical: #f59e0b;
+  --optical-glow: rgba(245, 158, 11, 0.35);
+  --audio: #10b981;
+  --audio-glow: rgba(16, 185, 129, 0.35);
+  --danger: #ef4444;
+  --danger-dark: #b91c1c;
+  --warning: #f59e0b;
+  --success: #10b981;
+  --shadow-btn: 0 4px 0 rgba(0, 0, 0, 0.45), 0 6px 14px rgba(0, 0, 0, 0.3);
+  --shadow-btn-pressed: 0 1px 0 rgba(0, 0, 0, 0.45), 0 2px 5px rgba(0, 0, 0, 0.25);
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.32);
+  --radius: 14px;
+  --radius-sm: 10px;
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+[data-theme="light"] {
+  --bg: #f1f5f9;
+  --bg-elevated: #ffffff;
+  --bg-card: #ffffff;
+  --bg-input: #f8fafc;
+  --border: #cbd5e1;
+  --border-strong: #94a3b8;
+  --text: #0f172a;
+  --text-muted: #475569;
+  --text-dim: #64748b;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-glow: rgba(37, 99, 235, 0.22);
+  --optical: #d97706;
+  --optical-glow: rgba(217, 119, 6, 0.25);
+  --audio: #059669;
+  --audio-glow: rgba(5, 150, 105, 0.25);
+  --danger: #dc2626;
+  --danger-dark: #991b1b;
+  --warning: #d97706;
+  --success: #059669;
+  --shadow-btn: 0 4px 0 rgba(15, 23, 42, 0.18), 0 5px 12px rgba(15, 23, 42, 0.1);
+  --shadow-btn-pressed: 0 1px 0 rgba(15, 23, 42, 0.18), 0 2px 4px rgba(15, 23, 42, 0.08);
+  --shadow-card: 0 6px 20px rgba(15, 23, 42, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  min-height: 100%;
+  background: var(--bg);
+  background-image: radial-gradient(circle at 12% 0%, rgba(59, 130, 246, 0.11), transparent 36%), radial-gradient(circle at 88% 12%, rgba(16, 185, 129, 0.09), transparent 34%);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  transition: background-color 0.25s ease, color 0.25s ease;
+  overflow-x: hidden;
+}
+
+.app-shell {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 14px 14px 90px;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 14px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.brand-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--audio));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px var(--accent-glow);
+  animation: brandGlow 3.6s ease-in-out infinite;
+}
+
+@keyframes brandGlow {
+  0%, 100% { box-shadow: 0 4px 14px var(--accent-glow); }
+  50% { box-shadow: 0 4px 20px var(--audio-glow); }
+}
+
+.brand-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.brand-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.2s ease;
+}
+
+.icon-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+}
+
+.status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.dot.ok {
+  background: var(--success);
+  box-shadow: 0 0 8px var(--audio-glow);
+}
+
+.dot.warn {
+  background: var(--warning);
+  box-shadow: 0 0 8px var(--optical-glow);
+}
+
+.dot.err {
+  background: var(--danger);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.45);
+}
+
+.dot.pulse {
+  animation: pulseDot 1.1s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.45); opacity: 0.55; }
+}
+
+.nav-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+
+.nav-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 12px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nav-tab.active {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 3px 0 #1d4ed8, 0 6px 14px var(--accent-glow);
+}
+
+.nav-tab:active {
+  transform: translateY(2px);
+}
+
+.view-panel {
+  display: none;
+  animation: fadeSlide 0.2s ease;
+}
+
+.view-panel.active {
+  display: block;
+}
+
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow-card);
+  margin-bottom: 14px;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card.live-active {
+  border-color: var(--audio);
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.28), var(--shadow-card);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.card-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.badge.ok {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: var(--success);
+}
+
+.badge.warn {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: var(--warning);
+}
+
+.badge.err {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: var(--danger);
+}
+
+.badge.info {
+  background: rgba(59, 130, 246, 0.14);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: var(--accent);
+}
+
+.mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 12px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-btn);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.mode-btn:active {
+  transform: translateY(3px);
+  box-shadow: var(--shadow-btn-pressed);
+}
+
+.mode-btn.active-optical {
+  border-color: var(--optical);
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--optical);
+}
+
+.mode-btn.active-audio {
+  border-color: var(--audio);
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--audio);
+}
+
+textarea, input[type="text"], input[type="number"], select {
+  width: 100%;
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+textarea:focus, input:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.field-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.field-val {
+  font-family: var(--font-mono);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.metric-box {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+}
+
+.metric-label {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+
+.metric-value {
+  font-family: var(--font-mono);
+  font-size: 0.98rem;
+  font-weight: 700;
+  margin-top: 2px;
+  color: var(--text);
+}
+
+.level-meter-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.level-meter-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--audio), var(--optical));
+  transition: width 0.06s linear;
+}
+
+.preview-box {
+  background: var(--bg-input);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  margin-top: 10px;
+  word-break: break-word;
+  white-space: pre-wrap;
+  font-size: 0.92rem;
+}
+
+.binary-box {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 11px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  max-height: 140px;
+  overflow-y: auto;
+  word-break: break-all;
+  color: var(--text-muted);
+}
+
+.bit-seg-pre { color: #f59e0b; font-weight: 700; }
+.bit-seg-sof { color: #38bdf8; font-weight: 700; }
+.bit-seg-len { color: #a78bfa; font-weight: 700; }
+.bit-seg-pay { color: var(--text); }
+.bit-seg-crc { color: #10b981; font-weight: 700; }
+.bit-seg-eof { color: #f43f5e; font-weight: 700; }
+
+.legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.range-wrap {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.preset-btn {
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.preset-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.btn-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.tactile-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #ffffff;
+  background: linear-gradient(180deg, #3b82f6, #2563eb);
+  box-shadow: 0 4px 0 #1d4ed8, 0 6px 14px var(--accent-glow);
+  transition: transform 0.07s ease, box-shadow 0.07s ease, filter 0.15s ease;
+  user-select: none;
+}
+
+.tactile-btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.tactile-btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #1d4ed8, 0 2px 5px var(--accent-glow);
+}
+
+.tactile-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.tactile-btn.success {
+  background: linear-gradient(180deg, #10b981, #059669);
+  box-shadow: 0 4px 0 #047857, 0 6px 14px var(--audio-glow);
+}
+
+.tactile-btn.success:active:not(:disabled) {
+  box-shadow: 0 1px 0 #047857;
+}
+
+.tactile-btn.warning {
+  background: linear-gradient(180deg, #f59e0b, #d97706);
+  box-shadow: 0 4px 0 #b45309, 0 6px 14px var(--optical-glow);
+}
+
+.tactile-btn.warning:active:not(:disabled) {
+  box-shadow: 0 1px 0 #b45309;
+}
+
+.tactile-btn.danger {
+  background: linear-gradient(180deg, #ef4444, #dc2626);
+  box-shadow: 0 4px 0 #991b1b, 0 6px 14px rgba(239, 68, 68, 0.3);
+}
+
+.tactile-btn.danger:active:not(:disabled) {
+  box-shadow: 0 1px 0 #991b1b;
+}
+
+.tactile-btn.secondary {
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.28);
+}
+
+.tactile-btn.secondary:active:not(:disabled) {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.28);
+}
+
+.progress-track {
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--audio));
+  border-radius: 999px;
+  transition: width 0.12s linear;
+}
+
+.signal-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 145px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.signal-canvas-wrap canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.canvas-overlay-tag {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text-muted);
+  background: rgba(11, 15, 23, 0.65);
+  padding: 2px 7px;
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+[data-theme="light"] .canvas-overlay-tag {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.screen-emitter {
+  width: 100%;
+  height: 110px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border-strong);
+  background: #05070b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  font-size: 0.95rem;
+  color: #64748b;
+  transition: background-color 0.03s linear, box-shadow 0.03s linear;
+  margin-top: 10px;
+}
+
+.screen-emitter.on {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 0 36px rgba(255, 255, 255, 0.85);
+}
+
+.alert-box {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  display: none;
+  line-height: 1.48;
+}
+
+.alert-box.show {
+  display: block;
+}
+
+.alert-box.warn {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: var(--warning);
+}
+
+.alert-box.err {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: var(--danger);
+}
+
+.alert-box.ok {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.45);
+  color: var(--success);
+}
+
+.perm-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.perm-bar-info {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.camera-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 300px;
+  background: #05080f;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+.camera-stage video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.camera-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 16px;
+  font-size: 0.88rem;
+}
+
+.reticle {
+  position: absolute;
+  width: 66px;
+  height: 66px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--optical);
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35), 0 0 14px var(--optical-glow);
+  pointer-events: none;
+  display: none;
+  transition: border-color 0.08s linear, box-shadow 0.08s linear;
+}
+
+.reticle.active {
+  display: block;
+}
+
+.reticle.high {
+  border-color: #10b981;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35), 0 0 22px var(--audio-glow);
+}
+
+.reticle-label {
+  position: absolute;
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.camera-select-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.decoded-output {
+  background: var(--bg-input);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  min-height: 76px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.decoded-output.valid {
+  border-color: var(--success);
+}
+
+.decoded-output.invalid {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.smart-panel {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+}
+
+.smart-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.smart-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  font-size: 0.8rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.smart-chip a {
+  color: var(--accent);
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--border-strong);
+  border-radius: 999px;
+  transition: 0.2s;
+}
+
+.slider:before {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+
+.switch input:checked + .slider {
+  background: var(--accent);
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-item {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+.history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.history-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+
+.history-binary {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--text-dim);
+  word-break: break-all;
+  max-height: 54px;
+  overflow-y: auto;
+  background: var(--bg-card);
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.history-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.mini-btn {
+  padding: 6px 11px;
+  border-radius: 7px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toast-stack {
+  position: fixed;
+  bottom: 18px;
+  right: 18px;
+  left: 18px;
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 999;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+  animation: fadeSlide 0.18s ease;
+}
+
+.toast.ok { border-left-color: var(--success); }
+.toast.warn { border-left-color: var(--warning); }
+.toast.err { border-left-color: var(--danger); }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.modal-backdrop.open {
+  display: flex;
+}
+
+.modal-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  max-width: 540px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 18px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.modal-card h3 {
+  font-size: 1.05rem;
+  margin-bottom: 10px;
+}
+
+.modal-card p, .modal-card li {
+  font-size: 0.86rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.modal-card ul {
+  padding-left: 18px;
+  margin-bottom: 10px;
+}
+
+.code-inline {
+  font-family: var(--font-mono);
+  background: var(--bg-input);
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.hidden {
+  display: none !important;
+}
+
+@media (max-width: 600px) {
+  .app-shell { padding: 10px 10px 80px; }
+  .brand-sub { display: none; }
+  .nav-tab { font-size: 0.84rem; padding: 10px 6px; }
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="top-bar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">PulseLink</div>
+        <div class="brand-sub">Optical &amp; Audio Binary Transceiver</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button type="button" class="icon-btn" id="btnProtocolInfo" title="Protocol &amp; Setup Guide">Guide</button>
+      <button type="button" class="icon-btn" id="btnThemeToggle" title="Toggle Dark/Light Theme">Theme</button>
+    </div>
+  </header>
+
+  <section class="status-strip" aria-label="Device status">
+    <div class="status-pill"><span class="dot" id="dotContext"></span><span id="lblContext">Checking context...</span></div>
+    <div class="status-pill"><span class="dot" id="dotTorch"></span><span id="lblTorch">Torch: Unchecked</span></div>
+    <div class="status-pill"><span class="dot" id="dotCamera"></span><span id="lblCamera">Camera: Idle</span></div>
+    <div class="status-pill"><span class="dot" id="dotMic"></span><span id="lblMic">Mic: Idle</span></div>
+    <div class="status-pill"><span class="dot" id="dotNet"></span><span id="lblNet">Network</span></div>
+  </section>
+
+  <nav class="nav-tabs" role="tablist">
+    <button type="button" class="nav-tab active" data-view="tx" role="tab" aria-selected="true">Transmitter</button>
+    <button type="button" class="nav-tab" data-view="rx" role="tab" aria-selected="false">Receiver</button>
+    <button type="button" class="nav-tab" data-view="history" role="tab" aria-selected="false">History (<span id="historyCount">0</span>)</button>
+  </nav>
+
+  <main>
+    <section id="view-tx" class="view-panel active">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">1. Message &amp; UTF-8 Binary Encoding</div>
+          <span class="badge info" id="txFrameBadge">Frame Ready</span>
+        </div>
+        <label class="field-label" for="txInput">
+          <span>Message to Transmit</span>
+          <span class="field-val" id="txCharCount">0 chars</span>
+        </label>
+        <textarea id="txInput" placeholder="Enter message (e.g. HELLO, URLs, UTF-8 text, emojis)...">HELLO</textarea>
+
+        <div class="metrics-row">
+          <div class="metric-box">
+            <div class="metric-label">UTF-8 Bytes</div>
+            <div class="metric-value" id="txByteCount">5</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Total Frame Bits</div>
+            <div class="metric-value" id="txTotalBits">96</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">CRC-16</div>
+            <div class="metric-value" id="txCrcHex">0x0000</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Est. Duration</div>
+            <div class="metric-value" id="txEstTime">23.0s</div>
+          </div>
+        </div>
+
+        <div class="field-label" style="margin-top:12px;">
+          <span>Message Preview</span>
+          <button type="button" class="mini-btn" id="btnClearTx">Clear</button>
+        </div>
+        <div class="preview-box" id="txPreview">HELLO</div>
+
+        <div class="field-label" style="margin-top:12px;">
+          <span>Encoded Binary Output</span>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="mini-btn" id="btnToggleBinaryScope">Show Payload Only</button>
+            <button type="button" class="mini-btn" id="btnCopyTxBinary">Copy Binary</button>
+          </div>
+        </div>
+        <div class="binary-box" id="txBinaryOutput"></div>
+        <div class="legend-row">
+          <span class="legend-item"><span class="legend-swatch" style="background:#f59e0b"></span>Preamble (10101010)</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:#38bdf8"></span>SOF (11110000)</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:#a78bfa"></span>Length (16b)</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--text)"></span>UTF-8 Payload</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:#10b981"></span>CRC-16 (16b)</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:#f43f5e"></span>EOF (00001111)</span>
+        </div>
+      </div>
+
+      <div class="card" id="txControlCard">
+        <div class="card-header">
+          <div class="card-title">2. Transmission Channel &amp; Parameters</div>
+          <span class="badge" id="txStateBadge">Idle</span>
+        </div>
+
+        <div class="mode-switch">
+          <button type="button" class="mode-btn active-optical" id="btnTxOptical">Flashlight (Optical)</button>
+          <button type="button" class="mode-btn" id="btnTxAudio">Speaker (Audio)</button>
+        </div>
+
+        <div class="preset-row">
+          <button type="button" class="preset-btn" data-preset="slow">Slow &amp; Ultra-Reliable</button>
+          <button type="button" class="preset-btn active" data-preset="standard">Standard</button>
+          <button type="button" class="preset-btn" data-preset="fast">Fast</button>
+        </div>
+
+        <div id="txOpticalControls" class="controls-grid">
+          <div class="range-wrap">
+            <div class="field-label"><span>Flashlight ON Duration (Bit 1)</span><span class="field-val" id="valTxOnMs">200 ms</span></div>
+            <input type="range" id="txOnMs" min="80" max="600" step="10" value="200">
+          </div>
+          <div class="range-wrap">
+            <div class="field-label"><span>Flashlight OFF Duration (Bit 0)</span><span class="field-val" id="valTxOffMs">200 ms</span></div>
+            <input type="range" id="txOffMs" min="80" max="600" step="10" value="200">
+          </div>
+          <div class="range-wrap">
+            <div class="field-label"><span>Inter-Bit Delay (Guard)</span><span class="field-val" id="valTxGapMs">50 ms</span></div>
+            <input type="range" id="txGapMs" min="0" max="250" step="10" value="50">
+          </div>
+          <div class="range-wrap">
+            <div class="field-label"><span>Speed Multiplier</span><span class="field-val" id="valTxSpeed">1.0x</span></div>
+            <input type="range" id="txSpeed" min="0.5" max="2.0" step="0.1" value="1.0">
+          </div>
+        </div>
+
+        <div id="txAudioControls" class="controls-grid hidden">
+          <div class="range-wrap">
+            <div class="field-label"><span>Beep Frequency</span><span class="field-val" id="valTxFreq">1800 Hz</span></div>
+            <input type="range" id="txFreq" min="600" max="4000" step="50" value="1800">
+          </div>
+          <div class="range-wrap">
+            <div class="field-label"><span>Beep Duration (Bit 1)</span><span class="field-val" id="valTxBeepMs">180 ms</span></div>
+            <input type="range" id="txBeepMs" min="60" max="500" step="10" value="180">
+          </div>
+          <div class="range-wrap">
+            <div class="field-label"><span>Silence Duration (Bit 0)</span><span class="field-val" id="valTxSilenceMs">180 ms</span></div>
+            <input type="range" id="txSilenceMs" min="60" max="500" step="10" value="180">
+          </div>
+          <div class="range-wrap">
+            <div class="field-label"><span>Inter-Bit Delay (Guard)</span><span class="field-val" id="valTxAudioGapMs">40 ms</span></div>
+            <input type="range" id="txAudioGapMs" min="0" max="200" step="10" value="40">
+          </div>
+        </div>
+
+        <div id="txOpticalFallbackWrap" class="toggle-row" style="margin-top:8px;">
+          <div>
+            <div style="font-size:0.86rem;font-weight:700;">Screen Flash Emitter Fallback</div>
+            <div style="font-size:0.76rem;color:var(--text-muted);">Flashes the optical panel below alongside or instead of hardware torch</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="chkScreenFlash" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="alert-box warn" id="txTorchAlert"></div>
+
+        <div class="screen-emitter" id="screenEmitter">OPTICAL EMITTER READY</div>
+
+        <div class="btn-row">
+          <button type="button" class="tactile-btn success" id="btnTxStart">Start</button>
+          <button type="button" class="tactile-btn warning" id="btnTxPause" disabled>Pause</button>
+          <button type="button" class="tactile-btn" id="btnTxResume" disabled>Resume</button>
+          <button type="button" class="tactile-btn danger" id="btnTxStop" disabled>Stop</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">3. Live Transmission Telemetry</div>
+          <span class="badge" id="txProgressLabel">0 / 0 bits (0%)</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="txProgressFill"></div>
+        </div>
+        <div class="metrics-row" style="margin-bottom:10px;">
+          <div class="metric-box">
+            <div class="metric-label">Current Bit</div>
+            <div class="metric-value" id="txCurrentBit">-</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Frame Section</div>
+            <div class="metric-value" id="txCurrentSection">Idle</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Remaining</div>
+            <div class="metric-value" id="txRemaining">0.0s</div>
+          </div>
+        </div>
+        <div class="signal-canvas-wrap">
+          <span class="canvas-overlay-tag" id="txWaveTag">TX CARRIER STANDBY</span>
+          <canvas id="txWaveform"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-rx" class="view-panel">
+      <div class="card" id="rxCaptureCard">
+        <div class="card-header">
+          <div class="card-title">1. Receiver Channel &amp; Capture</div>
+          <span class="badge" id="rxProtocolBadge">IDLE</span>
+        </div>
+
+        <div class="perm-bar">
+          <div class="perm-bar-info" id="rxPermSummary">Hardware access: tap Grant Permissions or Start Receiver to unlock Camera &amp; Mic.</div>
+          <button type="button" class="mini-btn" id="btnGrantPerms">Grant Camera &amp; Mic</button>
+        </div>
+
+        <div class="mode-switch">
+          <button type="button" class="mode-btn active-optical" id="btnRxOptical">Optical (Camera)</button>
+          <button type="button" class="mode-btn" id="btnRxAudio">Audio (Microphone)</button>
+        </div>
+
+        <div id="rxOpticalStage">
+          <div class="camera-stage" id="cameraStage" title="Tap anywhere on preview to aim the light sensor reticle">
+            <video id="rxVideo" playsinline webkit-playsinline muted autoplay></video>
+            <div class="camera-placeholder" id="cameraPlaceholder">
+              <strong>Rear Camera Preview Inactive</strong>
+              <span>Press Start Receiver to grant camera access. Tap the preview to aim the reticle at the transmitter flashlight.</span>
+            </div>
+            <div class="reticle" id="cameraReticle">
+              <span class="reticle-label" id="reticleLuma">Luma: 0</span>
+            </div>
+          </div>
+          <div class="camera-select-row hidden" id="rxCameraSelectWrap">
+            <label for="rxCameraSelect" style="font-size:0.8rem;color:var(--text-muted);white-space:nowrap;font-weight:600;">Camera Lens:</label>
+            <select id="rxCameraSelect" style="padding:7px 10px;font-size:0.84rem;"></select>
+          </div>
+          <canvas id="rxProcCanvas" class="hidden" width="64" height="64"></canvas>
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="tactile-btn success" id="btnRxStart">Start Receiver</button>
+          <button type="button" class="tactile-btn danger" id="btnRxStop" disabled>Stop Receiver</button>
+          <button type="button" class="tactile-btn secondary" id="btnRxCalibrate" disabled>Calibrate Ambient</button>
+          <button type="button" class="tactile-btn secondary" id="btnRxReset">Reset Buffer</button>
+        </div>
+
+        <div class="alert-box" id="rxAlert"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">2. Signal Analysis &amp; Thresholds</div>
+          <span class="badge" id="rxSignalBadge">Signal: LOW</span>
+        </div>
+
+        <div class="level-meter-track" aria-label="Live signal strength">
+          <div class="level-meter-fill" id="rxLevelBar"></div>
+        </div>
+
+        <div class="signal-canvas-wrap" style="margin-bottom:12px;">
+          <span class="canvas-overlay-tag" id="rxWaveTag">RX MONITOR STANDBY</span>
+          <canvas id="rxWaveform"></canvas>
+        </div>
+
+        <div class="metrics-row" style="margin-bottom:12px;">
+          <div class="metric-box">
+            <div class="metric-label" id="rxMetricLevelLabel">Brightness</div>
+            <div class="metric-value" id="rxMetricLevel">0</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Noise Floor</div>
+            <div class="metric-value" id="rxMetricFloor">0</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Last Pulse</div>
+            <div class="metric-value" id="rxMetricPulse">0 ms</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Last Gap</div>
+            <div class="metric-value" id="rxMetricGap">0 ms</div>
+          </div>
+        </div>
+
+        <div class="controls-grid">
+          <div class="range-wrap" id="rxOpticalThreshWrap">
+            <div class="field-label"><span>Brightness Threshold</span><span class="field-val" id="valRxBrightThresh">155</span></div>
+            <input type="range" id="rxBrightThresh" min="20" max="245" step="1" value="155">
+          </div>
+          <div class="range-wrap hidden" id="rxAudioFreqWrap">
+            <div class="field-label"><span>Target Beep Frequency</span><span class="field-val" id="valRxFreq">1800 Hz</span></div>
+            <input type="range" id="rxFreq" min="600" max="4000" step="50" value="1800">
+          </div>
+          <div class="range-wrap hidden" id="rxAudioThreshWrap">
+            <div class="field-label"><span>Audio SNR Threshold</span><span class="field-val" id="valRxAudioThresh">14 dB</span></div>
+            <input type="range" id="rxAudioThresh" min="4" max="35" step="1" value="14">
+          </div>
+          <div class="range-wrap">
+            <div class="field-label"><span>Expected Bit Slot</span><span class="field-val" id="valRxBitSlot">250 ms</span></div>
+            <input type="range" id="rxBitSlot" min="80" max="750" step="10" value="250">
+          </div>
+          <div class="range-wrap">
+            <div class="field-label"><span>Timing Tolerance</span><span class="field-val" id="valRxTolerance">35%</span></div>
+            <input type="range" id="rxTolerance" min="10" max="60" step="5" value="35">
+          </div>
+          <div class="range-wrap">
+            <div class="field-label"><span>Silence Timeout</span><span class="field-val" id="valRxTimeout">7 s</span></div>
+            <input type="range" id="rxTimeout" min="5" max="10" step="1" value="7">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">3. Decoded Message &amp; Binary Stream</div>
+          <span class="badge" id="rxCrcBadge">Awaiting Frame</span>
+        </div>
+
+        <div class="field-label">
+          <span>Decoded Human-Readable Message</span>
+          <button type="button" class="mini-btn" id="btnCopyRxText">Copy Message</button>
+        </div>
+        <div class="decoded-output" id="rxDecodedText">Waiting for incoming transmission...</div>
+
+        <div class="toggle-row" style="margin-top:8px;">
+          <div>
+            <div style="font-size:0.86rem;font-weight:700;">Smart Message Interpretation</div>
+            <div style="font-size:0.76rem;color:var(--text-muted);">Detects URLs, dates, numbers, emails, and optional online context without altering the message</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="chkSmartInterpret" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="smart-panel hidden" id="smartPanel">
+          <div class="field-label" style="margin-bottom:4px;">
+            <span>Smart Analysis</span>
+            <span class="badge info" id="smartModeBadge">Local Only</span>
+          </div>
+          <div class="smart-chips" id="smartChips"></div>
+          <div id="smartOnlineContext" style="margin-top:8px;font-size:0.82rem;color:var(--text-muted);"></div>
+        </div>
+
+        <div class="field-label" style="margin-top:12px;">
+          <span>Detected Real-Time Binary Stream</span>
+          <span class="field-val" id="rxBitCount">0 bits</span>
+        </div>
+        <div class="binary-box" id="rxBinaryStream">No bits detected yet.</div>
+      </div>
+    </section>
+
+    <section id="view-history" class="view-panel">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Persistent Transmission History (IndexedDB)</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="historyFilter" style="width:auto;padding:6px 10px;font-size:0.82rem;">
+              <option value="all">All Records</option>
+              <option value="TX">Transmitted (TX)</option>
+              <option value="RX">Received (RX)</option>
+            </select>
+            <button type="button" class="mini-btn" id="btnClearHistory" style="color:var(--danger);border-color:var(--danger);">Clear All</button>
+          </div>
+        </div>
+        <div class="history-list" id="historyList">
+          <div style="color:var(--text-muted);font-size:0.88rem;padding:12px 0;">No messages recorded yet. Transmitted and received messages are stored locally in IndexedDB.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+<div class="modal-backdrop" id="modalGuide" role="dialog" aria-modal="true" aria-labelledby="modalGuideTitle">
+  <div class="modal-card">
+    <h3 id="modalGuideTitle">Protocol &amp; Two-Device Setup Guide</h3>
+    <p><strong>Frame Structure (Identical on Optical &amp; Audio):</strong></p>
+    <ul>
+      <li><span class="code-inline">Preamble</span>: <span class="code-inline">10101010</span> (8 bits) for clock &amp; edge synchronization</li>
+      <li><span class="code-inline">SOF</span>: <span class="code-inline">11110000</span> (8 bits) explicit start-of-message marker</li>
+      <li><span class="code-inline">Length</span>: 16-bit big-endian UTF-8 byte count</li>
+      <li><span class="code-inline">Payload</span>: UTF-8 encoded message bytes</li>
+      <li><span class="code-inline">CRC-16-CCITT</span>: 16-bit checksum over Length + Payload</li>
+      <li><span class="code-inline">EOF</span>: <span class="code-inline">00001111</span> (8 bits) explicit end-of-message marker</li>
+    </ul>
+    <p><strong>Why Camera / Microphone Might Show "Permission Denied":</strong></p>
+    <ul>
+      <li>Opening the HTML file directly from phone storage (<span class="code-inline">file://</span> or <span class="code-inline">content://</span>) causes Android Chrome to block Camera &amp; Mic without asking.</li>
+      <li>Opening inside an embedded app viewer / iframe without camera/mic policy also blocks access.</li>
+      <li><strong>Fix:</strong> Host this single file on any free HTTPS host (GitHub Pages, Netlify Drop, Cloudflare Pages, Vercel) or via <span class="code-inline">localhost</span> / HTTPS tunnel, then open it directly in Chrome or Safari and tap <strong>Allow</strong>.</li>
+    </ul>
+    <p><strong>Matching Speed Between Devices:</strong></p>
+    <ul>
+      <li>Match Receiver <strong>Expected Bit Slot</strong> to Transmitter <strong>ON/Beep + Inter-Bit Delay</strong> (default Standard: 250 ms Optical, 220 ms Audio).</li>
+      <li>Tap <strong>Calibrate Ambient</strong> on the Receiver before starting transmission for best noise immunity.</li>
+    </ul>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+      <button type="button" class="tactile-btn" id="btnCloseGuide" style="min-height:40px;padding:8px 18px;">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modalConfirm" role="dialog" aria-modal="true" aria-labelledby="modalConfirmTitle">
+  <div class="modal-card" style="max-width:380px;">
+    <h3 id="modalConfirmTitle">Clear History?</h3>
+    <p>This permanently deletes all saved transmitted and received message records from local IndexedDB storage.</p>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;">
+      <button type="button" class="tactile-btn secondary" id="btnConfirmCancel" style="min-height:40px;">Cancel</button>
+      <button type="button" class="tactile-btn danger" id="btnConfirmOk" style="min-height:40px;">Delete All</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const PREAMBLE = '10101010';
+  const SOF = '11110000';
+  const EOF = '00001111';
+  const SYNC_PATTERN = PREAMBLE + SOF;
+  const SETTINGS_KEY = 'pulselink_settings_v1';
+  const DB_NAME = 'OptiAudioCommDB';
+  const DB_VERSION = 1;
+  const STORE_NAME = 'messages';
+
+  const PRESETS = {
+    slow: { onMs: 320, offMs: 320, gapMs: 80, beepMs: 280, silenceMs: 280, audioGapMs: 70 },
+    standard: { onMs: 200, offMs: 200, gapMs: 50, beepMs: 180, silenceMs: 180, audioGapMs: 40 },
+    fast: { onMs: 110, offMs: 110, gapMs: 30, beepMs: 100, silenceMs: 100, audioGapMs: 20 }
+  };
+
+  const state = {
+    theme: 'dark',
+    view: 'tx',
+    txMode: 'optical',
+    rxMode: 'optical',
+    showPayloadOnly: false,
+    torchSupported: null,
+    permCam: 'unknown',
+    permMic: 'unknown',
+    ambientRaf: null,
+    ambientPhase: 0,
+    tx: {
+      running: false,
+      paused: false,
+      stopRequested: false,
+      bits: '',
+      sections: [],
+      index: 0,
+      stream: null,
+      track: null,
+      audioCtx: null,
+      osc: null,
+      gain: null,
+      waveData: new Array(120).fill(0),
+      timerId: null,
+      frameInfo: null
+    },
+    rx: {
+      running: false,
+      stream: null,
+      audioCtx: null,
+      analyser: null,
+      rafId: null,
+      selectedCameraId: '',
+      roiX: 0.5,
+      roiY: 0.5,
+      noiseFloor: 30,
+      smoothLevel: 0,
+      isHigh: false,
+      lastEdgeTime: 0,
+      lastHighTime: 0,
+      lastPulseMs: 0,
+      lastGapMs: 0,
+      waveData: new Array(140).fill(0),
+      spectrumData: null,
+      protocolState: 'IDLE',
+      rawBits: '',
+      shiftReg: '',
+      expectedBytes: 0,
+      payloadBits: '',
+      crcBits: '',
+      eofBits: '',
+      sampleActiveCount: 0,
+      sampleTotalCount: 0,
+      slotStartTime: 0,
+      slotDurationMs: 250,
+      calibrating: false,
+      calSamples: [],
+      lastDecodedSig: '',
+      lastDecodedAt: 0,
+      interruptedNotified: false,
+      preInterruptState: 'PAYLOAD'
+    },
+    db: null,
+    history: []
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  function toast(msg, type = 'info') {
+    const el = document.createElement('div');
+    el.className = 'toast ' + type;
+    el.textContent = msg;
+    const stack = $('toastStack');
+    stack.appendChild(el);
+    setTimeout(() => {
+      el.style.opacity = '0';
+      el.style.transition = 'opacity 0.25s ease';
+      setTimeout(() => el.remove(), 260);
+    }, 3400);
+  }
+
+  function crc16ccitt(bytes) {
+    let crc = 0xFFFF;
+    for (let i = 0; i < bytes.length; i++) {
+      crc ^= (bytes[i] << 8);
+      for (let b = 0; b < 8; b++) {
+        if (crc & 0x8000) {
+          crc = ((crc << 1) ^ 0x1021) & 0xFFFF;
+        } else {
+          crc = (crc << 1) & 0xFFFF;
+        }
+      }
+    }
+    return crc;
+  }
+
+  function byteToBits(byte) {
+    return (byte & 0xFF).toString(2).padStart(8, '0');
+  }
+
+  function uint16ToBits(val) {
+    return (val & 0xFFFF).toString(2).padStart(16, '0');
+  }
+
+  function bitsToBytes(bitStr) {
+    const count = Math.floor(bitStr.length / 8);
+    const out = new Uint8Array(count);
+    for (let i = 0; i < count; i++) {
+      out[i] = parseInt(bitStr.slice(i * 8, i * 8 + 8), 2);
+    }
+    return out;
+  }
+
+  function encodeFrame(text) {
+    const encoder = new TextEncoder();
+    const payloadBytes = encoder.encode(text);
+    const len = payloadBytes.length;
+    const headerAndPayload = new Uint8Array(2 + len);
+    headerAndPayload[0] = (len >> 8) & 0xFF;
+    headerAndPayload[1] = len & 0xFF;
+    headerAndPayload.set(payloadBytes, 2);
+    const crc = crc16ccitt(headerAndPayload);
+
+    const lenBits = uint16ToBits(len);
+    let payloadBits = '';
+    for (let i = 0; i < payloadBytes.length; i++) {
+      payloadBits += byteToBits(payloadBytes[i]);
+    }
+    const crcBits = uint16ToBits(crc);
+    const fullBits = PREAMBLE + SOF + lenBits + payloadBits + crcBits + EOF;
+
+    const sections = [];
+    for (let i = 0; i < PREAMBLE.length; i++) sections.push('Preamble');
+    for (let i = 0; i < SOF.length; i++) sections.push('SOF');
+    for (let i = 0; i < lenBits.length; i++) sections.push('Length');
+    for (let i = 0; i < payloadBits.length; i++) sections.push('Payload');
+    for (let i = 0; i < crcBits.length; i++) sections.push('CRC-16');
+    for (let i = 0; i < EOF.length; i++) sections.push('EOF');
+
+    return {
+      text,
+      payloadBytes,
+      len,
+      crc,
+      crcHex: '0x' + crc.toString(16).toUpperCase().padStart(4, '0'),
+      lenBits,
+      payloadBits,
+      crcBits,
+      fullBits,
+      sections
+    };
+  }
+
+  function saveSettings() {
+    const data = {
+      theme: state.theme,
+      txMode: state.txMode,
+      rxMode: state.rxMode,
+      txOnMs: Number($('txOnMs').value),
+      txOffMs: Number($('txOffMs').value),
+      txGapMs: Number($('txGapMs').value),
+      txSpeed: Number($('txSpeed').value),
+      txFreq: Number($('txFreq').value),
+      txBeepMs: Number($('txBeepMs').value),
+      txSilenceMs: Number($('txSilenceMs').value),
+      txAudioGapMs: Number($('txAudioGapMs').value),
+      chkScreenFlash: $('chkScreenFlash').checked,
+      rxBrightThresh: Number($('rxBrightThresh').value),
+      rxFreq: Number($('rxFreq').value),
+      rxAudioThresh: Number($('rxAudioThresh').value),
+      rxBitSlot: Number($('rxBitSlot').value),
+      rxTolerance: Number($('rxTolerance').value),
+      rxTimeout: Number($('rxTimeout').value),
+      chkSmartInterpret: $('chkSmartInterpret').checked
+    };
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+    } catch (e) {}
+  }
+
+  function loadSettings() {
+    let saved = null;
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) saved = JSON.parse(raw);
+    } catch (e) {}
+
+    if (saved) {
+      if (saved.theme === 'light' || saved.theme === 'dark') state.theme = saved.theme;
+      if (saved.txMode === 'optical' || saved.txMode === 'audio') state.txMode = saved.txMode;
+      if (saved.rxMode === 'optical' || saved.rxMode === 'audio') state.rxMode = saved.rxMode;
+      const map = [
+        'txOnMs', 'txOffMs', 'txGapMs', 'txSpeed', 'txFreq', 'txBeepMs',
+        'txSilenceMs', 'txAudioGapMs', 'rxBrightThresh', 'rxFreq',
+        'rxAudioThresh', 'rxBitSlot', 'rxTolerance', 'rxTimeout'
+      ];
+      map.forEach((k) => {
+        if (typeof saved[k] === 'number' && !Number.isNaN(saved[k]) && $(k)) {
+          $(k).value = String(saved[k]);
+        }
+      });
+      if (typeof saved.chkScreenFlash === 'boolean') $('chkScreenFlash').checked = saved.chkScreenFlash;
+      if (typeof saved.chkSmartInterpret === 'boolean') $('chkSmartInterpret').checked = saved.chkSmartInterpret;
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      state.theme = 'light';
+    }
+    applyTheme();
+  }
+
+  function applyTheme() {
+    document.documentElement.setAttribute('data-theme', state.theme);
+    $('btnThemeToggle').textContent = state.theme === 'dark' ? 'Light' : 'Dark';
+  }
+
+  function initDB() {
+    return new Promise((resolve) => {
+      if (!('indexedDB' in window)) {
+        resolve(null);
+        return;
+      }
+      try {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (ev) => {
+          const db = ev.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+            store.createIndex('timestamp', 'timestamp', { unique: false });
+          }
+        };
+        req.onsuccess = (ev) => {
+          state.db = ev.target.result;
+          resolve(state.db);
+        };
+        req.onerror = () => resolve(null);
+      } catch (e) {
+        resolve(null);
+      }
+    });
+  }
+
+  function addHistoryRecord(rec) {
+    const entry = {
+      direction: rec.direction,
+      mode: rec.mode,
+      text: rec.text || '',
+      binary: rec.binary || '',
+      status: rec.status || 'success',
+      error: rec.error || '',
+      bytes: rec.bytes || 0,
+      crc: rec.crc || '',
+      timestamp: Date.now()
+    };
+
+    if (!state.db) {
+      entry.id = Date.now() + Math.random();
+      state.history.unshift(entry);
+      renderHistory();
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      try {
+        const tx = state.db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.add(entry);
+        req.onsuccess = () => {
+          loadHistory().then(resolve);
+        };
+        req.onerror = () => resolve();
+      } catch (e) {
+        resolve();
+      }
+    });
+  }
+
+  function loadHistory() {
+    if (!state.db) {
+      renderHistory();
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      try {
+        const tx = state.db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => {
+          state.history = (req.result || []).sort((a, b) => b.timestamp - a.timestamp);
+          renderHistory();
+          resolve();
+        };
+        req.onerror = () => resolve();
+      } catch (e) {
+        resolve();
+      }
+    });
+  }
+
+  function clearHistoryDB() {
+    if (!state.db) {
+      state.history = [];
+      renderHistory();
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      try {
+        const tx = state.db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).clear();
+        tx.oncomplete = () => {
+          state.history = [];
+          renderHistory();
+          resolve();
+        };
+        tx.onerror = () => resolve();
+      } catch (e) {
+        resolve();
+      }
+    });
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function renderHistory() {
+    const filter = $('historyFilter').value;
+    const list = $('historyList');
+    $('historyCount').textContent = String(state.history.length);
+    const items = state.history.filter((it) => filter === 'all' || it.direction === filter);
+
+    if (!items.length) {
+      list.innerHTML = '<div style="color:var(--text-muted);font-size:0.88rem;padding:12px 0;">No matching transmission records found.</div>';
+      return;
+    }
+
+    list.innerHTML = items.map((it) => {
+      const dt = new Date(it.timestamp).toLocaleString();
+      const statusCls = it.status === 'success' ? 'ok' : (it.status === 'stopped' ? 'warn' : 'err');
+      const dirLabel = it.direction === 'TX' ? 'Transmitted' : 'Received';
+      const modeLabel = it.mode === 'optical' ? 'Optical' : 'Audio';
+      const previewText = it.text ? escapeHtml(it.text) : '<span style="color:var(--text-dim);font-style:italic;">No valid decoded text</span>';
+      const errHtml = it.error ? '<div style="color:var(--danger);font-size:0.78rem;margin-bottom:6px;">Error: ' + escapeHtml(it.error) + '</div>' : '';
+      return '<div class="history-item">' +
+        '<div class="history-meta">' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' +
+            '<span class="badge info">' + dirLabel + '</span>' +
+            '<span class="badge">' + modeLabel + '</span>' +
+            '<span class="badge ' + statusCls + '">' + escapeHtml(it.status.toUpperCase()) + '</span>' +
+            (it.crc ? '<span class="badge">' + escapeHtml(it.crc) + '</span>' : '') +
+          '</div>' +
+          '<span>' + escapeHtml(dt) + '</span>' +
+        '</div>' +
+        '<div class="history-text">' + previewText + '</div>' +
+        errHtml +
+        '<div class="history-binary">' + escapeHtml(it.binary || '') + '</div>' +
+        '<div class="history-actions">' +
+          (it.text ? '<button type="button" class="mini-btn" data-reuse="' + escapeHtml(it.text) + '">Load in Transmitter</button>' : '') +
+          (it.text ? '<button type="button" class="mini-btn" data-copy="' + escapeHtml(it.text) + '">Copy Text</button>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function copyToClipboard(text, label) {
+    if (!text) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => toast(label + ' copied', 'ok')).catch(() => fallbackCopy(text, label));
+    } else {
+      fallbackCopy(text, label);
+    }
+  }
+
+  function fallbackCopy(text, label) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      toast(label + ' copied', 'ok');
+    } catch (e) {
+      toast('Copy failed', 'err');
+    }
+    ta.remove();
+  }
+
+  function isEmbeddedFrame() {
+    try {
+      return window.self !== window.top;
+    } catch (e) {
+      return true;
+    }
+  }
+
+  function diagnoseMediaError(kind, err) {
+    const label = kind === 'camera' ? 'Camera' : 'Microphone';
+    const proto = location.protocol;
+    const errName = (err && err.name) ? err.name : 'Error';
+    const errMsg = (err && err.message) ? err.message : 'Unknown error';
+
+    if (proto === 'file:' || proto === 'content:') {
+      return label + ' blocked by browser because this page was opened directly from local file storage (' + proto + '). Host this HTML file over HTTPS (GitHub Pages, Netlify Drop, or Vercel) or http://localhost, then open it in Chrome or Safari.';
+    }
+    if (isEmbeddedFrame() && (errName === 'NotAllowedError' || errName === 'SecurityError' || /denied/i.test(errMsg))) {
+      return label + ' blocked by this embedded viewer frame. Open the hosted HTTPS URL directly in your phone browser (Chrome or Safari) so the browser can show the Allow prompt.';
+    }
+    if (!window.isSecureContext) {
+      return label + ' requires a secure HTTPS connection (or localhost). Current address (' + proto + '//' + location.host + ') is not a secure context.';
+    }
+    if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
+      return label + ' permission was denied (' + errMsg + '). Tap the lock/settings icon in your browser address bar, set ' + label + ' to Allow, and verify ' + label + ' is enabled for your browser in phone Settings, then tap Start Receiver again.';
+    }
+    if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
+      return 'No ' + label.toLowerCase() + ' device was found on this device.';
+    }
+    if (errName === 'NotReadableError' || errName === 'TrackStartError') {
+      return label + ' is currently in use by another app or tab. Close other camera/audio apps and try again.';
+    }
+    if (errName === 'OverconstrainedError') {
+      return label + ' constraints were not supported by this hardware (' + errMsg + ').';
+    }
+    return label + ' unavailable (' + errName + ': ' + errMsg + ').';
+  }
+
+  function updatePermissionSummary() {
+    const camTxt = state.permCam === 'granted' ? 'Granted' : (state.permCam === 'denied' ? 'Blocked' : (state.permCam === 'prompt' ? 'Ready to Prompt' : 'Tap to Request'));
+    const micTxt = state.permMic === 'granted' ? 'Granted' : (state.permMic === 'denied' ? 'Blocked' : (state.permMic === 'prompt' ? 'Ready to Prompt' : 'Tap to Request'));
+    $('rxPermSummary').textContent = 'Camera: ' + camTxt + ' | Mic: ' + micTxt;
+
+    if (!state.rx.running) {
+      if (state.permCam === 'granted') {
+        $('dotCamera').className = 'dot ok';
+        $('lblCamera').textContent = 'Camera: Ready';
+      } else if (state.permCam === 'denied') {
+        $('dotCamera').className = 'dot err';
+        $('lblCamera').textContent = 'Camera: Blocked';
+      } else {
+        $('dotCamera').className = 'dot';
+        $('lblCamera').textContent = 'Camera: Idle';
+      }
+
+      if (state.permMic === 'granted') {
+        $('dotMic').className = 'dot ok';
+        $('lblMic').textContent = 'Mic: Ready';
+      } else if (state.permMic === 'denied') {
+        $('dotMic').className = 'dot err';
+        $('lblMic').textContent = 'Mic: Blocked';
+      } else {
+        $('dotMic').className = 'dot';
+        $('lblMic').textContent = 'Mic: Idle';
+      }
+    }
+  }
+
+  async function queryBrowserPermissions() {
+    if (!navigator.permissions || !navigator.permissions.query) {
+      updatePermissionSummary();
+      return;
+    }
+    try {
+      const cam = await navigator.permissions.query({ name: 'camera' });
+      state.permCam = cam.state;
+      cam.onchange = () => {
+        state.permCam = cam.state;
+        updatePermissionSummary();
+      };
+    } catch (e) {}
+    try {
+      const mic = await navigator.permissions.query({ name: 'microphone' });
+      state.permMic = mic.state;
+      mic.onchange = () => {
+        state.permMic = mic.state;
+        updatePermissionSummary();
+      };
+    } catch (e) {}
+    updatePermissionSummary();
+  }
+
+  async function populateCameraList() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cams = devices.filter((d) => d.kind === 'videoinput');
+      const sel = $('rxCameraSelect');
+      if (cams.length <= 1) {
+        $('rxCameraSelectWrap').classList.add('hidden');
+        return;
+      }
+      const prev = state.rx.selectedCameraId || sel.value;
+      sel.innerHTML = '';
+      cams.forEach((c, idx) => {
+        const opt = document.createElement('option');
+        opt.value = c.deviceId;
+        opt.textContent = c.label || ('Camera ' + (idx + 1));
+        sel.appendChild(opt);
+      });
+      if (prev && cams.some((c) => c.deviceId === prev)) {
+        sel.value = prev;
+      } else {
+        const back = cams.find((c) => /back|rear|environment/i.test(c.label));
+        if (back) sel.value = back.deviceId;
+      }
+      state.rx.selectedCameraId = sel.value;
+      $('rxCameraSelectWrap').classList.remove('hidden');
+    } catch (e) {}
+  }
+
+  async function requestCameraStream(preferredDeviceId = '') {
+    const tiers = [];
+    if (preferredDeviceId) {
+      tiers.push({ video: { deviceId: { exact: preferredDeviceId } }, audio: false });
+    }
+    tiers.push({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+    tiers.push({ video: { facingMode: 'environment' }, audio: false });
+    tiers.push({ video: true, audio: false });
+
+    let lastErr = null;
+    for (let i = 0; i < tiers.length; i++) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(tiers[i]);
+        return stream;
+      } catch (err) {
+        lastErr = err;
+        if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' || err.name === 'SecurityError')) {
+          throw err;
+        }
+      }
+    }
+    throw lastErr || new Error('Unable to access camera');
+  }
+
+  async function requestMicStream() {
+    const tiers = [
+      { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false },
+      { audio: true, video: false }
+    ];
+    let lastErr = null;
+    for (let i = 0; i < tiers.length; i++) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(tiers[i]);
+        return stream;
+      } catch (err) {
+        lastErr = err;
+        if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' || err.name === 'SecurityError')) {
+          throw err;
+        }
+      }
+    }
+    throw lastErr || new Error('Unable to access microphone');
+  }
+
+  async function grantPermissionsNow() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showRxAlert(diagnoseMediaError('camera', new Error('MediaDevices API unavailable')), 'err');
+      return;
+    }
+    showRxAlert('');
+    let camOk = false;
+    let micOk = false;
+    let errMessages = [];
+
+    try {
+      const sCam = await requestCameraStream('');
+      sCam.getTracks().forEach((t) => t.stop());
+      camOk = true;
+      state.permCam = 'granted';
+    } catch (e) {
+      state.permCam = 'denied';
+      errMessages.push(diagnoseMediaError('camera', e));
+    }
+
+    try {
+      const sMic = await requestMicStream();
+      sMic.getTracks().forEach((t) => t.stop());
+      micOk = true;
+      state.permMic = 'granted';
+    } catch (e) {
+      state.permMic = 'denied';
+      errMessages.push(diagnoseMediaError('microphone', e));
+    }
+
+    updatePermissionSummary();
+    if (camOk) await populateCameraList();
+
+    if (camOk && micOk) {
+      showRxAlert('Camera and Microphone permissions granted. Tap Start Receiver to begin reading signals.', 'ok');
+      toast('Camera & Microphone unlocked!', 'ok');
+    } else if (camOk || micOk) {
+      showRxAlert((camOk ? 'Camera unlocked. ' : 'Microphone unlocked. ') + errMessages.join(' '), 'warn');
+      toast('Partial permissions granted', 'warn');
+    } else {
+      showRxAlert(errMessages[0] || 'Permissions were denied.', 'err');
+      toast('Hardware access blocked by browser context', 'err');
+    }
+  }
+
+  function updateEnvironmentStatus() {
+    const proto = location.protocol;
+    const isFile = proto === 'file:' || proto === 'content:';
+    const secure = window.isSecureContext && !isFile;
+    $('dotContext').className = 'dot ' + (secure ? 'ok' : 'warn');
+    if (isFile) {
+      $('lblContext').textContent = 'Local File (' + proto + ' Needs HTTPS)';
+    } else if (isEmbeddedFrame()) {
+      $('lblContext').textContent = 'Embedded Frame (Open in Browser)';
+    } else {
+      $('lblContext').textContent = secure ? 'Secure Context (HTTPS/Local)' : 'Insecure Context (Needs HTTPS)';
+    }
+
+    const online = navigator.onLine;
+    $('dotNet').className = 'dot ' + (online ? 'ok' : 'warn');
+    $('lblNet').textContent = online ? 'Online' : 'Offline (Local Mode)';
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      $('dotTorch').className = 'dot err';
+      $('lblTorch').textContent = 'MediaDevices Unavailable';
+      showTxTorchAlert('Camera/Microphone APIs require a modern browser over HTTPS or localhost.', 'err');
+    } else {
+      const supported = navigator.mediaDevices.getSupportedConstraints ? navigator.mediaDevices.getSupportedConstraints() : {};
+      if ('torch' in supported) {
+        $('dotTorch').className = 'dot ok';
+        $('lblTorch').textContent = 'Torch API Detected';
+      } else {
+        $('dotTorch').className = 'dot warn';
+        $('lblTorch').textContent = 'Torch: Check on Start';
+      }
+    }
+  }
+
+  function showTxTorchAlert(msg, type = 'warn') {
+    const box = $('txTorchAlert');
+    if (!msg) {
+      box.className = 'alert-box';
+      box.textContent = '';
+      return;
+    }
+    box.className = 'alert-box show ' + type;
+    box.textContent = msg;
+  }
+
+  function showRxAlert(msg, type = 'warn') {
+    const box = $('rxAlert');
+    if (!msg) {
+      box.className = 'alert-box';
+      box.textContent = '';
+      return;
+    }
+    box.className = 'alert-box show ' + type;
+    box.textContent = msg;
+  }
+
+  function getTxBitDurations() {
+    if (state.txMode === 'optical') {
+      const speed = Math.max(0.5, Number($('txSpeed').value) || 1);
+      const onMs = Math.round(Number($('txOnMs').value) / speed);
+      const offMs = Math.round(Number($('txOffMs').value) / speed);
+      const gapMs = Math.round(Number($('txGapMs').value) / speed);
+      return { onMs, offMs, gapMs, slotMs: Math.max(onMs, offMs) + gapMs };
+    }
+    const onMs = Number($('txBeepMs').value);
+    const offMs = Number($('txSilenceMs').value);
+    const gapMs = Number($('txAudioGapMs').value);
+    return { onMs, offMs, gapMs, slotMs: Math.max(onMs, offMs) + gapMs };
+  }
+
+  function updateTxEncoding() {
+    const text = $('txInput').value;
+    $('txCharCount').textContent = text.length + ' chars';
+    $('txPreview').textContent = text.length ? text : '(Empty message)';
+
+    if (!text.length) {
+      state.tx.frameInfo = null;
+      $('txByteCount').textContent = '0';
+      $('txTotalBits').textContent = '0';
+      $('txCrcHex').textContent = '-';
+      $('txEstTime').textContent = '0.0s';
+      $('txBinaryOutput').textContent = 'Enter a message to generate UTF-8 binary.';
+      $('txFrameBadge').textContent = 'Empty';
+      $('txFrameBadge').className = 'badge warn';
+      return;
+    }
+
+    const frame = encodeFrame(text);
+    state.tx.frameInfo = frame;
+
+    $('txByteCount').textContent = String(frame.len);
+    $('txTotalBits').textContent = String(frame.fullBits.length);
+    $('txCrcHex').textContent = frame.crcHex;
+
+    const timing = getTxBitDurations();
+    const totalSec = (frame.fullBits.length * timing.slotMs) / 1000;
+    $('txEstTime').textContent = totalSec.toFixed(1) + 's';
+    $('txFrameBadge').textContent = 'Frame Ready (' + timing.slotMs + 'ms/bit)';
+    $('txFrameBadge').className = 'badge info';
+
+    if (state.showPayloadOnly) {
+      $('txBinaryOutput').innerHTML = '<span class="bit-seg-pay">' + frame.payloadBits.replace(/(.{8})/g, '$1 ').trim() + '</span>';
+    } else {
+      $('txBinaryOutput').innerHTML =
+        '<span class="bit-seg-pre">' + PREAMBLE + '</span> ' +
+        '<span class="bit-seg-sof">' + SOF + '</span> ' +
+        '<span class="bit-seg-len">' + frame.lenBits + '</span> ' +
+        '<span class="bit-seg-pay">' + frame.payloadBits.replace(/(.{8})/g, '$1 ').trim() + '</span> ' +
+        '<span class="bit-seg-crc">' + frame.crcBits + '</span> ' +
+        '<span class="bit-seg-eof">' + EOF + '</span>';
+    }
+  }
+
+  function updateRangeLabels() {
+    $('valTxOnMs').textContent = $('txOnMs').value + ' ms';
+    $('valTxOffMs').textContent = $('txOffMs').value + ' ms';
+    $('valTxGapMs').textContent = $('txGapMs').value + ' ms';
+    $('valTxSpeed').textContent = Number($('txSpeed').value).toFixed(1) + 'x';
+    $('valTxFreq').textContent = $('txFreq').value + ' Hz';
+    $('valTxBeepMs').textContent = $('txBeepMs').value + ' ms';
+    $('valTxSilenceMs').textContent = $('txSilenceMs').value + ' ms';
+    $('valTxAudioGapMs').textContent = $('txAudioGapMs').value + ' ms';
+    $('valRxBrightThresh').textContent = $('rxBrightThresh').value;
+    $('valRxFreq').textContent = $('rxFreq').value + ' Hz';
+    $('valRxAudioThresh').textContent = $('rxAudioThresh').value + ' dB';
+    $('valRxBitSlot').textContent = $('rxBitSlot').value + ' ms';
+    $('valRxTolerance').textContent = $('rxTolerance').value + '%';
+    $('valRxTimeout').textContent = $('rxTimeout').value + ' s';
+    updateTxEncoding();
+  }
+
+  function setTxMode(mode) {
+    if (state.tx.running) {
+      toast('Stop active transmission before switching mode', 'warn');
+      return;
+    }
+    state.txMode = mode;
+    const isOpt = mode === 'optical';
+    $('btnTxOptical').className = 'mode-btn' + (isOpt ? ' active-optical' : '');
+    $('btnTxAudio').className = 'mode-btn' + (!isOpt ? ' active-audio' : '');
+    $('txOpticalControls').classList.toggle('hidden', !isOpt);
+    $('txAudioControls').classList.toggle('hidden', isOpt);
+    $('txOpticalFallbackWrap').classList.toggle('hidden', !isOpt);
+    $('screenEmitter').classList.toggle('hidden', !isOpt);
+    if (!isOpt) showTxTorchAlert('');
+    updateTxEncoding();
+    saveSettings();
+  }
+
+  function setRxMode(mode) {
+    if (state.rx.running) {
+      stopReceiver();
+    }
+    state.rxMode = mode;
+    const isOpt = mode === 'optical';
+    $('btnRxOptical').className = 'mode-btn' + (isOpt ? ' active-optical' : '');
+    $('btnRxAudio').className = 'mode-btn' + (!isOpt ? ' active-audio' : '');
+    $('rxOpticalStage').classList.toggle('hidden', !isOpt);
+    $('rxOpticalThreshWrap').classList.toggle('hidden', !isOpt);
+    $('rxAudioFreqWrap').classList.toggle('hidden', isOpt);
+    $('rxAudioThreshWrap').classList.toggle('hidden', isOpt);
+    $('rxMetricLevelLabel').textContent = isOpt ? 'Brightness' : 'Target SNR (dB)';
+    $('rxBitSlot').value = isOpt ? '250' : '220';
+    updateRangeLabels();
+    resetReceiverBuffer(false);
+    saveSettings();
+  }
+
+  function drawWaveform(canvas, data, color, thresholdRatio = null, spectrum = null, targetRatio = null) {
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width < 20 || rect.height < 20) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.floor(rect.width * dpr);
+    const h = Math.floor(rect.height * dpr);
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, w, h);
+
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.14)';
+    ctx.lineWidth = 1;
+    for (let i = 1; i <= 3; i++) {
+      const y = (h / 4) * i;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+    for (let i = 1; i <= 5; i++) {
+      const x = (w / 6) * i;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+
+    if (spectrum && spectrum.length) {
+      const barCount = Math.min(64, spectrum.length);
+      const step = Math.max(1, Math.floor(spectrum.length / barCount));
+      const bw = w / barCount;
+      for (let i = 0; i < barCount; i++) {
+        const db = spectrum[i * step];
+        const norm = Math.max(0, Math.min(1, (db + 100) / 85));
+        const bh = norm * (h - 16 * dpr);
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.22)';
+        ctx.fillRect(i * bw + 1, h - bh, Math.max(1, bw - 2), bh);
+      }
+      if (targetRatio !== null) {
+        const tx = Math.max(2, Math.min(w - 2, targetRatio * w));
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.7)';
+        ctx.lineWidth = 2 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(tx, 0);
+        ctx.lineTo(tx, h);
+        ctx.stroke();
+      }
+    }
+
+    if (thresholdRatio !== null) {
+      const ty = h - Math.max(0.04, Math.min(0.96, thresholdRatio)) * h;
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.8)';
+      ctx.setLineDash([6 * dpr, 4 * dpr]);
+      ctx.lineWidth = 1.5 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(0, ty);
+      ctx.lineTo(w, ty);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.4 * dpr;
+    ctx.beginPath();
+    const len = data.length;
+    for (let i = 0; i < len; i++) {
+      const x = (i / (len - 1)) * w;
+      const v = Math.max(0, Math.min(1, data[i]));
+      const y = h - 8 * dpr - v * (h - 16 * dpr);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  function startAmbientCanvasLoop() {
+    if (state.ambientRaf) cancelAnimationFrame(state.ambientRaf);
+    const tick = () => {
+      if (!document.hidden) {
+        state.ambientPhase += 0.055;
+        if (!state.tx.running && state.view === 'tx') {
+          const idleTx = new Array(120);
+          for (let i = 0; i < 120; i++) {
+            idleTx[i] = 0.08 + 0.03 * Math.sin(state.ambientPhase + i * 0.14);
+          }
+          drawWaveform($('txWaveform'), idleTx, state.txMode === 'optical' ? '#f59e0b' : '#10b981');
+        }
+        if (!state.rx.running && state.view === 'rx') {
+          const idleRx = new Array(140);
+          for (let i = 0; i < 140; i++) {
+            idleRx[i] = 0.07 + 0.028 * Math.sin(state.ambientPhase * 1.15 + i * 0.12);
+          }
+          const thresh = state.rxMode === 'optical'
+            ? Number($('rxBrightThresh').value) / 255
+            : Math.min(1, Number($('rxAudioThresh').value) / 40);
+          drawWaveform($('rxWaveform'), idleRx, state.rxMode === 'optical' ? '#f59e0b' : '#10b981', thresh);
+        }
+      }
+      state.ambientRaf = requestAnimationFrame(tick);
+    };
+    state.ambientRaf = requestAnimationFrame(tick);
+  }
+
+  async function initTorchHardware() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      state.torchSupported = false;
+      return false;
+    }
+    try {
+      const stream = await requestCameraStream('');
+      const track = stream.getVideoTracks()[0];
+      const caps = track && track.getCapabilities ? track.getCapabilities() : {};
+      if (caps && caps.torch) {
+        state.tx.stream = stream;
+        state.tx.track = track;
+        state.torchSupported = true;
+        $('dotTorch').className = 'dot ok pulse';
+        $('lblTorch').textContent = 'Torch: Active';
+        showTxTorchAlert('');
+        return true;
+      }
+      stream.getTracks().forEach((t) => t.stop());
+      state.torchSupported = false;
+      $('dotTorch').className = 'dot warn';
+      $('lblTorch').textContent = 'Torch: Unsupported';
+      return false;
+    } catch (err) {
+      state.torchSupported = false;
+      $('dotTorch').className = 'dot warn';
+      $('lblTorch').textContent = 'Torch: Unavailable';
+      return false;
+    }
+  }
+
+  async function setTorchOutput(on) {
+    if (state.tx.track && state.torchSupported) {
+      try {
+        await state.tx.track.applyConstraints({ advanced: [{ torch: Boolean(on) }] });
+      } catch (e) {}
+    }
+    if ($('chkScreenFlash').checked) {
+      const emitter = $('screenEmitter');
+      emitter.classList.toggle('on', Boolean(on));
+      emitter.textContent = on ? 'SIGNAL HIGH (1)' : 'SIGNAL LOW (0)';
+    }
+  }
+
+  function releaseTxHardwareSync() {
+    if (state.tx.track) {
+      try { state.tx.track.applyConstraints({ advanced: [{ torch: false }] }); } catch (e) {}
+      state.tx.track.stop();
+      state.tx.track = null;
+    }
+    if (state.tx.stream) {
+      state.tx.stream.getTracks().forEach((t) => t.stop());
+      state.tx.stream = null;
+    }
+    if (state.tx.osc) {
+      try { state.tx.osc.stop(); } catch (e) {}
+      state.tx.osc.disconnect();
+      state.tx.osc = null;
+    }
+    if (state.tx.gain) {
+      state.tx.gain.disconnect();
+      state.tx.gain = null;
+    }
+    if (state.tx.audioCtx) {
+      state.tx.audioCtx.close().catch(() => {});
+      state.tx.audioCtx = null;
+    }
+    const emitter = $('screenEmitter');
+    emitter.classList.remove('on');
+    emitter.textContent = 'OPTICAL EMITTER READY';
+    $('txControlCard').classList.remove('live-active');
+    $('txWaveTag').textContent = 'TX CARRIER STANDBY';
+    if (state.torchSupported) {
+      $('dotTorch').className = 'dot ok';
+      $('lblTorch').textContent = 'Torch: Released';
+    }
+  }
+
+  function initTxAudio() {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) throw new Error('Web Audio API is not supported in this browser.');
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = Number($('txFreq').value);
+    gain.gain.value = 0;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    state.tx.audioCtx = ctx;
+    state.tx.osc = osc;
+    state.tx.gain = gain;
+  }
+
+  function setAudioTone(on) {
+    if (!state.tx.audioCtx || !state.tx.gain || !state.tx.osc) return;
+    const now = state.tx.audioCtx.currentTime;
+    state.tx.osc.frequency.setTargetAtTime(Number($('txFreq').value), now, 0.004);
+    state.tx.gain.gain.cancelScheduledValues(now);
+    state.tx.gain.gain.setTargetAtTime(on ? 0.55 : 0.0, now, 0.006);
+  }
+
+  function sleepMs(ms) {
+    return new Promise((resolve) => {
+      state.tx.timerId = setTimeout(resolve, Math.max(0, ms));
+    });
+  }
+
+  function pushTxWave(val) {
+    state.tx.waveData.push(val);
+    if (state.tx.waveData.length > 120) state.tx.waveData.shift();
+    const color = state.txMode === 'optical' ? '#f59e0b' : '#10b981';
+    drawWaveform($('txWaveform'), state.tx.waveData, color);
+  }
+
+  function updateTxButtons() {
+    const r = state.tx.running;
+    const p = state.tx.paused;
+    $('btnTxStart').disabled = r;
+    $('btnTxPause').disabled = !r || p;
+    $('btnTxResume').disabled = !r || !p;
+    $('btnTxStop').disabled = !r;
+    $('txInput').disabled = r;
+  }
+
+  async function startTransmission() {
+    const text = $('txInput').value;
+    if (!text.length) {
+      toast('Enter a message before starting transmission', 'warn');
+      return;
+    }
+    if (state.rx.running) {
+      stopReceiver();
+    }
+
+    const frame = encodeFrame(text);
+    state.tx.frameInfo = frame;
+    state.tx.bits = frame.fullBits;
+    state.tx.sections = frame.sections;
+    state.tx.index = 0;
+    state.tx.running = true;
+    state.tx.paused = false;
+    state.tx.stopRequested = false;
+    state.tx.waveData = new Array(120).fill(0);
+    updateTxButtons();
+    $('txStateBadge').textContent = 'Initializing...';
+    $('txStateBadge').className = 'badge info';
+
+    if (state.txMode === 'optical') {
+      const hasTorch = await initTorchHardware();
+      if (!hasTorch) {
+        if ($('chkScreenFlash').checked) {
+          showTxTorchAlert('Hardware rear flashlight is unavailable on this browser/device. Using the Screen Flash Emitter fallback below.', 'warn');
+        } else {
+          showTxTorchAlert('Hardware rear flashlight is unavailable. Enable Screen Flash Emitter Fallback or switch to Audio mode.', 'err');
+          state.tx.running = false;
+          updateTxButtons();
+          $('txStateBadge').textContent = 'Unsupported';
+          $('txStateBadge').className = 'badge err';
+          return;
+        }
+      }
+    } else {
+      try {
+        initTxAudio();
+        if (state.tx.audioCtx.state === 'suspended') {
+          await state.tx.audioCtx.resume();
+        }
+      } catch (err) {
+        toast(err.message, 'err');
+        state.tx.running = false;
+        updateTxButtons();
+        return;
+      }
+    }
+
+    $('txControlCard').classList.add('live-active');
+    $('txWaveTag').textContent = state.txMode === 'optical' ? 'TX OPTICAL LIVE' : 'TX AUDIO ' + $('txFreq').value + ' HZ LIVE';
+    $('txStateBadge').textContent = 'Transmitting';
+    $('txStateBadge').className = 'badge ok';
+    toast('Transmission started (' + state.txMode + ')', 'ok');
+
+    const total = state.tx.bits.length;
+    while (state.tx.index < total && !state.tx.stopRequested) {
+      while (state.tx.paused && !state.tx.stopRequested) {
+        if (state.txMode === 'optical') await setTorchOutput(false);
+        else setAudioTone(false);
+        pushTxWave(0);
+        await sleepMs(100);
+      }
+      if (state.tx.stopRequested) break;
+
+      const bit = state.tx.bits[state.tx.index];
+      const sec = state.tx.sections[state.tx.index] || 'Data';
+      const timing = getTxBitDurations();
+      const activeDur = bit === '1' ? timing.onMs : timing.offMs;
+      const padDur = Math.max(0, timing.slotMs - activeDur);
+
+      const pct = Math.round(((state.tx.index + 1) / total) * 100);
+      $('txProgressFill').style.width = pct + '%';
+      $('txProgressLabel').textContent = (state.tx.index + 1) + ' / ' + total + ' bits (' + pct + '%)';
+      $('txCurrentBit').textContent = bit;
+      $('txCurrentSection').textContent = sec;
+      const remSec = ((total - state.tx.index) * timing.slotMs) / 1000;
+      $('txRemaining').textContent = remSec.toFixed(1) + 's';
+
+      if (bit === '1') {
+        if (state.txMode === 'optical') await setTorchOutput(true);
+        else setAudioTone(true);
+        pushTxWave(0.95);
+        pushTxWave(0.95);
+      } else {
+        if (state.txMode === 'optical') await setTorchOutput(false);
+        else setAudioTone(false);
+        pushTxWave(0.05);
+        pushTxWave(0.05);
+      }
+
+      await sleepMs(activeDur);
+      if (state.tx.stopRequested) break;
+
+      if (padDur > 0) {
+        if (state.txMode === 'optical') await setTorchOutput(false);
+        else setAudioTone(false);
+        pushTxWave(0.02);
+        await sleepMs(padDur);
+      }
+
+      state.tx.index++;
+    }
+
+    const completed = !state.tx.stopRequested && state.tx.index >= total;
+    releaseTxHardwareSync();
+    state.tx.running = false;
+    state.tx.paused = false;
+    updateTxButtons();
+
+    if (completed) {
+      $('txStateBadge').textContent = 'Completed';
+      $('txStateBadge').className = 'badge ok';
+      $('txRemaining').textContent = '0.0s';
+      toast('Transmission completed', 'ok');
+      await addHistoryRecord({
+        direction: 'TX',
+        mode: state.txMode,
+        text: frame.text,
+        binary: frame.fullBits,
+        status: 'success',
+        bytes: frame.len,
+        crc: frame.crcHex
+      });
+    } else {
+      $('txStateBadge').textContent = 'Stopped';
+      $('txStateBadge').className = 'badge warn';
+      toast('Transmission stopped and hardware released', 'warn');
+      await addHistoryRecord({
+        direction: 'TX',
+        mode: state.txMode,
+        text: frame.text,
+        binary: frame.fullBits.slice(0, state.tx.index),
+        status: 'stopped',
+        error: 'Stopped at bit ' + state.tx.index + ' of ' + total,
+        bytes: frame.len,
+        crc: frame.crcHex
+      });
+    }
+  }
+
+  function pauseTransmission() {
+    if (!state.tx.running || state.tx.paused) return;
+    state.tx.paused = true;
+    $('txStateBadge').textContent = 'Paused';
+    $('txStateBadge').className = 'badge warn';
+    updateTxButtons();
+    toast('Transmission paused', 'warn');
+  }
+
+  function resumeTransmission() {
+    if (!state.tx.running || !state.tx.paused) return;
+    state.tx.paused = false;
+    $('txStateBadge').textContent = 'Transmitting';
+    $('txStateBadge').className = 'badge ok';
+    updateTxButtons();
+    toast('Transmission resumed', 'ok');
+  }
+
+  function stopTransmission() {
+    if (!state.tx.running) return;
+    state.tx.stopRequested = true;
+    state.tx.paused = false;
+    if (state.tx.timerId) {
+      clearTimeout(state.tx.timerId);
+      state.tx.timerId = null;
+    }
+  }
+
+  function setRxProtocolState(nextState, badgeType = '') {
+    state.rx.protocolState = nextState;
+    $('rxProtocolBadge').textContent = nextState;
+    $('rxProtocolBadge').className = 'badge' + (badgeType ? ' ' + badgeType : '');
+  }
+
+  function resetReceiverBuffer(notify = true) {
+    state.rx.rawBits = '';
+    state.rx.shiftReg = '';
+    state.rx.expectedBytes = 0;
+    state.rx.payloadBits = '';
+    state.rx.crcBits = '';
+    state.rx.eofBits = '';
+    state.rx.sampleActiveCount = 0;
+    state.rx.sampleTotalCount = 0;
+    state.rx.slotStartTime = 0;
+    state.rx.interruptedNotified = false;
+    setRxProtocolState(state.rx.running ? 'LISTENING' : 'IDLE', state.rx.running ? 'info' : '');
+    $('rxBitCount').textContent = '0 bits';
+    $('rxBinaryStream').textContent = state.rx.running ? 'Listening for preamble (10101010 11110000)...' : 'No bits detected yet.';
+    if (notify) toast('Receiver buffer cleared', 'info');
+  }
+
+  function updateRxButtons() {
+    $('btnRxStart').disabled = state.rx.running;
+    $('btnRxStop').disabled = !state.rx.running;
+    $('btnRxCalibrate').disabled = !state.rx.running;
+  }
+
+  async function startReceiver() {
+    if (state.tx.running) {
+      stopTransmission();
+      releaseTxHardwareSync();
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showRxAlert(diagnoseMediaError(state.rxMode === 'optical' ? 'camera' : 'microphone', new Error('MediaDevices API unavailable')), 'err');
+      return;
+    }
+
+    showRxAlert('');
+    resetReceiverBuffer(false);
+    state.rx.slotDurationMs = Number($('rxBitSlot').value);
+    state.rx.waveData = new Array(140).fill(0);
+    state.rx.smoothLevel = 0;
+    state.rx.isHigh = false;
+    state.rx.lastEdgeTime = performance.now();
+    state.rx.lastHighTime = performance.now();
+
+    if (state.rxMode === 'optical') {
+      try {
+        const stream = await requestCameraStream(state.rx.selectedCameraId);
+        state.rx.stream = stream;
+        state.permCam = 'granted';
+        updatePermissionSummary();
+        const video = $('rxVideo');
+        video.muted = true;
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
+        video.srcObject = stream;
+        try {
+          await video.play();
+        } catch (playErr) {
+          await new Promise((resolve) => {
+            video.onloadedmetadata = () => {
+              video.play().catch(() => {}).finally(resolve);
+            };
+            setTimeout(resolve, 600);
+          });
+        }
+        $('cameraPlaceholder').classList.add('hidden');
+        $('cameraReticle').classList.add('active');
+        $('rxCaptureCard').classList.add('live-active');
+        $('rxWaveTag').textContent = 'RX OPTICAL LIVE';
+        $('dotCamera').className = 'dot ok pulse';
+        $('lblCamera').textContent = 'Camera: Active';
+        state.rx.running = true;
+        updateRxButtons();
+        setRxProtocolState('LISTENING', 'info');
+        populateCameraList();
+        toast('Optical receiver active. Aim reticle at transmitter light.', 'ok');
+        runReceiverLoop();
+      } catch (err) {
+        state.permCam = 'denied';
+        updatePermissionSummary();
+        $('dotCamera').className = 'dot err';
+        $('lblCamera').textContent = 'Camera: Blocked';
+        showRxAlert(diagnoseMediaError('camera', err), 'err');
+      }
+    } else {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) {
+        showRxAlert('Web Audio API is not supported in this browser.', 'err');
+        return;
+      }
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+      try {
+        const stream = await requestMicStream();
+        if (ctx.state === 'suspended') {
+          await ctx.resume();
+        }
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.2;
+        source.connect(analyser);
+
+        state.rx.stream = stream;
+        state.rx.audioCtx = ctx;
+        state.rx.analyser = analyser;
+        state.permMic = 'granted';
+        updatePermissionSummary();
+        $('rxCaptureCard').classList.add('live-active');
+        $('rxWaveTag').textContent = 'RX AUDIO SPECTRUM (' + $('rxFreq').value + ' HZ)';
+        $('dotMic').className = 'dot ok pulse';
+        $('lblMic').textContent = 'Mic: Active';
+        state.rx.running = true;
+        updateRxButtons();
+        setRxProtocolState('LISTENING', 'info');
+        toast('Audio receiver active at ' + $('rxFreq').value + ' Hz.', 'ok');
+        runReceiverLoop();
+      } catch (err) {
+        ctx.close().catch(() => {});
+        state.permMic = 'denied';
+        updatePermissionSummary();
+        $('dotMic').className = 'dot err';
+        $('lblMic').textContent = 'Mic: Blocked';
+        showRxAlert(diagnoseMediaError('microphone', err), 'err');
+      }
+    }
+  }
+
+  function stopReceiver() {
+    if (state.rx.rafId) {
+      cancelAnimationFrame(state.rx.rafId);
+      state.rx.rafId = null;
+    }
+    if (state.rx.stream) {
+      state.rx.stream.getTracks().forEach((t) => t.stop());
+      state.rx.stream = null;
+    }
+    if (state.rx.audioCtx) {
+      state.rx.audioCtx.close().catch(() => {});
+      state.rx.audioCtx = null;
+      state.rx.analyser = null;
+    }
+    const video = $('rxVideo');
+    video.srcObject = null;
+    $('cameraPlaceholder').classList.remove('hidden');
+    $('cameraReticle').classList.remove('active');
+    $('cameraReticle').classList.remove('high');
+    $('rxCaptureCard').classList.remove('live-active');
+    $('rxWaveTag').textContent = 'RX MONITOR STANDBY';
+    $('rxLevelBar').style.width = '0%';
+    state.rx.running = false;
+    state.rx.calibrating = false;
+    state.rx.spectrumData = null;
+    updatePermissionSummary();
+    updateRxButtons();
+    setRxProtocolState('IDLE');
+    $('rxSignalBadge').textContent = 'Signal: LOW';
+    $('rxSignalBadge').className = 'badge';
+  }
+
+  function startCalibration() {
+    if (!state.rx.running) return;
+    state.rx.calibrating = true;
+    state.rx.calSamples = [];
+    toast('Calibrating ambient baseline for 1.5s... Keep transmitter OFF.', 'info');
+    setTimeout(() => {
+      if (!state.rx.calibrating) return;
+      state.rx.calibrating = false;
+      if (!state.rx.calSamples.length) return;
+      const avg = state.rx.calSamples.reduce((a, b) => a + b, 0) / state.rx.calSamples.length;
+      const maxVal = Math.max(...state.rx.calSamples);
+      state.rx.noiseFloor = avg;
+      if (state.rxMode === 'optical') {
+        const nextThresh = Math.min(240, Math.max(40, Math.round(maxVal + 32)));
+        $('rxBrightThresh').value = String(nextThresh);
+      } else {
+        const nextSnr = Math.min(30, Math.max(8, Math.round(maxVal + 6)));
+        $('rxAudioThresh').value = String(nextSnr);
+      }
+      updateRangeLabels();
+      saveSettings();
+      toast('Ambient calibration complete', 'ok');
+    }, 1500);
+  }
+
+  function sampleOpticalLevel() {
+    const video = $('rxVideo');
+    if (video.readyState < 2 || !video.videoWidth) return 0;
+    const canvas = $('rxProcCanvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const size = 40;
+    const sx = Math.max(0, Math.min(video.videoWidth - size, Math.floor(state.rx.roiX * video.videoWidth - size / 2)));
+    const sy = Math.max(0, Math.min(video.videoHeight - size, Math.floor(state.rx.roiY * video.videoHeight - size / 2)));
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
+    const data = ctx.getImageData(0, 0, size, size).data;
+    let sum = 0;
+    const pixels = size * size;
+    for (let i = 0; i < data.length; i += 4) {
+      sum += data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    }
+    return sum / pixels;
+  }
+
+  function sampleAudioSnr() {
+    if (!state.rx.analyser || !state.rx.audioCtx) return { snr: 0, floor: 0, bins: null, targetRatio: null };
+    const analyser = state.rx.analyser;
+    const bins = new Float32Array(analyser.frequencyBinCount);
+    analyser.getFloatFrequencyData(bins);
+    const sampleRate = state.rx.audioCtx.sampleRate;
+    const binHz = sampleRate / analyser.fftSize;
+    const targetHz = Number($('rxFreq').value);
+    const centerBin = Math.round(targetHz / binHz);
+    const halfBand = Math.max(2, Math.round(90 / binHz));
+
+    let peakTarget = -140;
+    for (let i = Math.max(1, centerBin - halfBand); i <= Math.min(bins.length - 1, centerBin + halfBand); i++) {
+      if (bins[i] > peakTarget) peakTarget = bins[i];
+    }
+
+    let noiseSum = 0;
+    let noiseCount = 0;
+    for (let i = Math.max(1, centerBin - halfBand * 5); i <= Math.min(bins.length - 1, centerBin + halfBand * 5); i++) {
+      if (Math.abs(i - centerBin) > halfBand + 2) {
+        noiseSum += bins[i];
+        noiseCount++;
+      }
+    }
+    const bgFloor = noiseCount ? noiseSum / noiseCount : -95;
+    const snr = Math.max(0, peakTarget - bgFloor);
+    const maxDisplayBin = Math.min(bins.length, Math.round(4500 / binHz));
+    const displaySlice = bins.subarray(0, maxDisplayBin);
+    const targetRatio = maxDisplayBin > 0 ? centerBin / maxDisplayBin : 0.5;
+    return { snr, floor: Math.max(0, bgFloor + 100), bins: displaySlice, targetRatio };
+  }
+
+  function runReceiverLoop() {
+    if (!state.rx.running) return;
+    const now = performance.now();
+    state.rx.slotDurationMs = Number($('rxBitSlot').value);
+
+    let level = 0;
+    let threshold = 0;
+    let normLevel = 0;
+    let normThresh = 0;
+    let spectrum = null;
+    let targetRatio = null;
+
+    if (state.rxMode === 'optical') {
+      const rawLuma = sampleOpticalLevel();
+      state.rx.smoothLevel = state.rx.smoothLevel * 0.35 + rawLuma * 0.65;
+      level = state.rx.smoothLevel;
+      threshold = Number($('rxBrightThresh').value);
+      if (!state.rx.isHigh) {
+        state.rx.noiseFloor = state.rx.noiseFloor * 0.985 + level * 0.015;
+      }
+      normLevel = level / 255;
+      normThresh = threshold / 255;
+      $('rxMetricLevel').textContent = Math.round(level) + ' / 255';
+      $('rxMetricFloor').textContent = Math.round(state.rx.noiseFloor);
+      $('reticleLuma').textContent = 'Luma: ' + Math.round(level);
+    } else {
+      const res = sampleAudioSnr();
+      state.rx.smoothLevel = state.rx.smoothLevel * 0.3 + res.snr * 0.7;
+      level = state.rx.smoothLevel;
+      threshold = Number($('rxAudioThresh').value);
+      state.rx.noiseFloor = state.rx.noiseFloor * 0.97 + res.floor * 0.03;
+      normLevel = Math.min(1, level / 40);
+      normThresh = Math.min(1, threshold / 40);
+      spectrum = res.bins;
+      targetRatio = res.targetRatio;
+      $('rxMetricLevel').textContent = level.toFixed(1) + ' dB';
+      $('rxMetricFloor').textContent = Math.round(state.rx.noiseFloor);
+      $('rxWaveTag').textContent = 'RX AUDIO SPECTRUM (' + $('rxFreq').value + ' HZ)';
+    }
+
+    $('rxLevelBar').style.width = Math.round(Math.max(0, Math.min(1, normLevel)) * 100) + '%';
+
+    if (state.rx.calibrating) {
+      state.rx.calSamples.push(level);
+    }
+
+    state.rx.waveData.push(normLevel);
+    if (state.rx.waveData.length > 140) state.rx.waveData.shift();
+    drawWaveform($('rxWaveform'), state.rx.waveData, state.rxMode === 'optical' ? '#f59e0b' : '#10b981', normThresh, spectrum, targetRatio);
+
+    const hyst = state.rxMode === 'optical' ? 8 : 2;
+    const prevHigh = state.rx.isHigh;
+    if (!prevHigh && level >= threshold) {
+      state.rx.isHigh = true;
+    } else if (prevHigh && level <= Math.max(0, threshold - hyst)) {
+      state.rx.isHigh = false;
+    }
+
+    if (state.rx.isHigh) {
+      state.rx.lastHighTime = now;
+      state.rx.interruptedNotified = false;
+    }
+
+    $('rxSignalBadge').textContent = state.rx.isHigh ? 'Signal: HIGH (1)' : 'Signal: LOW (0)';
+    $('rxSignalBadge').className = 'badge ' + (state.rx.isHigh ? 'ok' : '');
+    if (state.rxMode === 'optical') {
+      $('cameraReticle').classList.toggle('high', state.rx.isHigh);
+    }
+
+    if (state.rx.isHigh !== prevHigh) {
+      const delta = Math.round(now - state.rx.lastEdgeTime);
+      state.rx.lastEdgeTime = now;
+      if (prevHigh) {
+        state.rx.lastPulseMs = delta;
+        $('rxMetricPulse').textContent = delta + ' ms';
+      } else {
+        state.rx.lastGapMs = delta;
+        $('rxMetricGap').textContent = delta + ' ms';
+        if (state.rx.slotStartTime === 0) {
+          state.rx.slotStartTime = now;
+          state.rx.sampleActiveCount = 0;
+          state.rx.sampleTotalCount = 0;
+        } else {
+          const elapsed = now - state.rx.slotStartTime;
+          const tol = state.rx.slotDurationMs * (Number($('rxTolerance').value) / 100);
+          if (elapsed > state.rx.slotDurationMs - tol && elapsed < state.rx.slotDurationMs + tol) {
+            finalizeBitSlot(now);
+          }
+        }
+      }
+    }
+
+    if (state.rx.slotStartTime > 0) {
+      state.rx.sampleTotalCount++;
+      if (state.rx.isHigh) state.rx.sampleActiveCount++;
+
+      const elapsed = now - state.rx.slotStartTime;
+      if (elapsed >= state.rx.slotDurationMs) {
+        finalizeBitSlot(now);
+      }
+
+      const silentMs = now - state.rx.lastHighTime;
+      const timeoutMs = Number($('rxTimeout').value) * 1000;
+      const activeFrame = state.rx.protocolState === 'HEADER' || state.rx.protocolState === 'PAYLOAD' || state.rx.protocolState === 'CRC' || state.rx.protocolState === 'EOF';
+
+      if (activeFrame && silentMs > 2500 && silentMs < timeoutMs && !state.rx.interruptedNotified) {
+        state.rx.interruptedNotified = true;
+        state.rx.preInterruptState = state.rx.protocolState;
+        setRxProtocolState('PAUSED / INTERRUPTED', 'warn');
+        showRxAlert('Temporary signal interruption or paused transmitter detected. Holding partial frame...', 'warn');
+      } else if (silentMs >= timeoutMs) {
+        if (activeFrame) {
+          handleIncompleteTimeout();
+        } else {
+          state.rx.slotStartTime = 0;
+          state.rx.shiftReg = '';
+          setRxProtocolState('LISTENING', 'info');
+        }
+      }
+    }
+
+    state.rx.rafId = requestAnimationFrame(runReceiverLoop);
+  }
+
+  function finalizeBitSlot(now) {
+    const ratio = state.rx.sampleTotalCount > 0 ? state.rx.sampleActiveCount / state.rx.sampleTotalCount : 0;
+    const bit = ratio >= 0.35 ? '1' : '0';
+    state.rx.slotStartTime = now;
+    state.rx.sampleActiveCount = 0;
+    state.rx.sampleTotalCount = 0;
+    onBitReceived(bit);
+  }
+
+  function onBitReceived(bit) {
+    state.rx.rawBits += bit;
+    if (state.rx.rawBits.length > 4096) {
+      state.rx.rawBits = state.rx.rawBits.slice(-2048);
+    }
+    $('rxBitCount').textContent = state.rx.rawBits.length + ' bits';
+    $('rxBinaryStream').textContent = state.rx.rawBits.replace(/(.{8})/g, '$1 ').trim();
+    $('rxBinaryStream').scrollTop = $('rxBinaryStream').scrollHeight;
+
+    if (state.rx.protocolState === 'LISTENING' || state.rx.protocolState === 'IDLE' || state.rx.protocolState === 'COMPLETED') {
+      state.rx.shiftReg = (state.rx.shiftReg + bit).slice(-16);
+      if (state.rx.shiftReg === SYNC_PATTERN) {
+        state.rx.payloadBits = '';
+        state.rx.crcBits = '';
+        state.rx.eofBits = '';
+        state.rx.expectedBytes = 0;
+        setRxProtocolState('HEADER', 'info');
+        showRxAlert('Preamble & Start-of-Message marker locked. Receiving header...', 'ok');
+      }
+      return;
+    }
+
+    if (state.rx.protocolState === 'PAUSED / INTERRUPTED') {
+      setRxProtocolState(state.rx.preInterruptState || 'PAYLOAD', 'info');
+      showRxAlert('');
+    }
+
+    if (state.rx.protocolState === 'HEADER') {
+      state.rx.payloadBits += bit;
+      if (state.rx.payloadBits.length === 16) {
+        const len = parseInt(state.rx.payloadBits, 2);
+        if (len <= 0 || len > 4096) {
+          reportCorruptedFrame('Invalid payload length in header (' + len + ' bytes).', state.rx.payloadBits);
+          return;
+        }
+        state.rx.expectedBytes = len;
+        state.rx.payloadBits = '';
+        setRxProtocolState('PAYLOAD', 'info');
+      }
+      return;
+    }
+
+    if (state.rx.protocolState === 'PAYLOAD') {
+      state.rx.payloadBits += bit;
+      if (state.rx.payloadBits.length >= state.rx.expectedBytes * 8) {
+        setRxProtocolState('CRC', 'info');
+      }
+      return;
+    }
+
+    if (state.rx.protocolState === 'CRC') {
+      state.rx.crcBits += bit;
+      if (state.rx.crcBits.length === 16) {
+        setRxProtocolState('EOF', 'info');
+      }
+      return;
+    }
+
+    if (state.rx.protocolState === 'EOF') {
+      state.rx.eofBits += bit;
+      if (state.rx.eofBits.length === 8) {
+        validateAndDecodeFrame();
+      }
+    }
+  }
+
+  function validateAndDecodeFrame() {
+    const len = state.rx.expectedBytes;
+    const payloadBytes = bitsToBytes(state.rx.payloadBits);
+    const checkBuf = new Uint8Array(2 + payloadBytes.length);
+    checkBuf[0] = (len >> 8) & 0xFF;
+    checkBuf[1] = len & 0xFF;
+    checkBuf.set(payloadBytes, 2);
+
+    const calcCrc = crc16ccitt(checkBuf);
+    const rxCrc = parseInt(state.rx.crcBits, 2);
+    const eofOk = state.rx.eofBits === EOF;
+    const fullCaptured = PREAMBLE + SOF + uint16ToBits(len) + state.rx.payloadBits + state.rx.crcBits + state.rx.eofBits;
+
+    if (calcCrc !== rxCrc || !eofOk) {
+      const reason = calcCrc !== rxCrc
+        ? 'CRC-16 checksum mismatch (expected 0x' + calcCrc.toString(16).toUpperCase().padStart(4, '0') + ', got 0x' + rxCrc.toString(16).toUpperCase().padStart(4, '0') + ').'
+        : 'Missing or invalid End-of-Message marker.';
+      reportCorruptedFrame(reason, fullCaptured);
+      return;
+    }
+
+    let decodedText = '';
+    try {
+      decodedText = new TextDecoder('utf-8', { fatal: true }).decode(payloadBytes);
+    } catch (e) {
+      reportCorruptedFrame('UTF-8 decoding failed on received bytes.', fullCaptured);
+      return;
+    }
+
+    const sig = decodedText + ':' + rxCrc;
+    const now = Date.now();
+    if (sig === state.rx.lastDecodedSig && now - state.rx.lastDecodedAt < 3000) {
+      state.rx.shiftReg = '';
+      state.rx.slotStartTime = 0;
+      setRxProtocolState('LISTENING', 'info');
+      return;
+    }
+    state.rx.lastDecodedSig = sig;
+    state.rx.lastDecodedAt = now;
+
+    const crcHex = '0x' + rxCrc.toString(16).toUpperCase().padStart(4, '0');
+    $('rxDecodedText').textContent = decodedText;
+    $('rxDecodedText').className = 'decoded-output valid';
+    $('rxCrcBadge').textContent = 'CRC-16 Valid (' + crcHex + ')';
+    $('rxCrcBadge').className = 'badge ok';
+    setRxProtocolState('COMPLETED', 'ok');
+    showRxAlert('Complete message received and verified via CRC-16 and EOF marker.', 'ok');
+    toast('Message received successfully!', 'ok');
+
+    runSmartInterpretation(decodedText);
+
+    addHistoryRecord({
+      direction: 'RX',
+      mode: state.rxMode,
+      text: decodedText,
+      binary: fullCaptured,
+      status: 'success',
+      bytes: len,
+      crc: crcHex
+    });
+
+    state.rx.shiftReg = '';
+    state.rx.slotStartTime = 0;
+    setTimeout(() => {
+      if (state.rx.running && state.rx.protocolState === 'COMPLETED') {
+        setRxProtocolState('LISTENING', 'info');
+      }
+    }, 2200);
+  }
+
+  function reportCorruptedFrame(reason, binaryData) {
+    $('rxDecodedText').textContent = 'Corrupted or invalid transmission detected. Output suppressed to prevent misleading text.';
+    $('rxDecodedText').className = 'decoded-output invalid';
+    $('rxCrcBadge').textContent = 'Integrity Failed';
+    $('rxCrcBadge').className = 'badge err';
+    $('smartPanel').classList.add('hidden');
+    setRxProtocolState('ERROR', 'err');
+    showRxAlert(reason + ' Check alignment, threshold, or matching bit duration.', 'err');
+    toast('Corrupted data rejected', 'err');
+
+    addHistoryRecord({
+      direction: 'RX',
+      mode: state.rxMode,
+      text: '',
+      binary: binaryData,
+      status: 'corrupted',
+      error: reason,
+      bytes: state.rx.expectedBytes
+    });
+
+    state.rx.shiftReg = '';
+    state.rx.slotStartTime = 0;
+    setTimeout(() => {
+      if (state.rx.running) setRxProtocolState('LISTENING', 'info');
+    }, 1800);
+  }
+
+  function handleIncompleteTimeout() {
+    const gotBits = state.rx.payloadBits.length;
+    const needBits = state.rx.expectedBytes * 8;
+    const msg = 'Transmission timed out after ' + $('rxTimeout').value + 's of silence before EOF marker (' + gotBits + '/' + needBits + ' payload bits received).';
+    $('rxDecodedText').textContent = 'Incomplete transmission timed out. Partial data was not decoded.';
+    $('rxDecodedText').className = 'decoded-output invalid';
+    $('rxCrcBadge').textContent = 'Incomplete Timeout';
+    $('rxCrcBadge').className = 'badge warn';
+    $('smartPanel').classList.add('hidden');
+    setRxProtocolState('TIMEOUT / INCOMPLETE', 'warn');
+    showRxAlert(msg, 'warn');
+    toast('Transmission break timeout', 'warn');
+
+    addHistoryRecord({
+      direction: 'RX',
+      mode: state.rxMode,
+      text: '',
+      binary: state.rx.payloadBits,
+      status: 'incomplete',
+      error: msg,
+      bytes: state.rx.expectedBytes
+    });
+
+    state.rx.shiftReg = '';
+    state.rx.slotStartTime = 0;
+    setTimeout(() => {
+      if (state.rx.running) setRxProtocolState('LISTENING', 'info');
+    }, 1800);
+  }
+
+  async function runSmartInterpretation(text) {
+    const panel = $('smartPanel');
+    const chips = $('smartChips');
+    const onlineBox = $('smartOnlineContext');
+    if (!$('chkSmartInterpret').checked || !text.trim()) {
+      panel.classList.add('hidden');
+      return;
+    }
+
+    const found = [];
+    const urlRegex = /\b((?:https?:\/\/|www\.)[^\s<>"']+)/gi;
+    const emailRegex = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
+    const dateRegex = /\b(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:,\s*\d{4})?)\b/gi;
+    const numRegex = /\b\d+(?:[.,]\d+)?(?:\s*(?:%|USD|INR|EUR|ms|Hz|km|kg))?\b/g;
+
+    const urls = text.match(urlRegex) || [];
+    const emails = text.match(emailRegex) || [];
+    const dates = text.match(dateRegex) || [];
+    const nums = text.match(numRegex) || [];
+
+    urls.forEach((u) => {
+      const href = u.startsWith('http') ? u : 'https://' + u;
+      found.push({ type: 'URL', html: 'URL: <a href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(u) + '</a>' });
+    });
+    emails.forEach((em) => {
+      found.push({ type: 'Email', html: 'Email: <strong>' + escapeHtml(em) + '</strong>' });
+    });
+    dates.forEach((d) => {
+      found.push({ type: 'Date', html: 'Date: <strong>' + escapeHtml(d) + '</strong>' });
+    });
+    if (nums.length && nums.length <= 6) {
+      nums.forEach((n) => {
+        found.push({ type: 'Number', html: 'Number: <strong>' + escapeHtml(n) + '</strong>' });
+      });
+    }
+    if (/^WIFI:S:/i.test(text.trim())) {
+      found.push({ type: 'Pattern', html: 'Pattern: <strong>Wi-Fi Configuration String</strong>' });
+    }
+    if (/^SOS\b/i.test(text.trim())) {
+      found.push({ type: 'Pattern', html: 'Pattern: <strong>Emergency Distress Signal</strong>' });
+    }
+
+    panel.classList.remove('hidden');
+    onlineBox.textContent = '';
+
+    if (found.length) {
+      chips.innerHTML = found.map((f) => '<div class="smart-chip">' + f.html + '</div>').join('');
+    } else {
+      chips.innerHTML = '<div class="smart-chip">Plain UTF-8 Text (' + text.trim().split(/\s+/).length + ' words)</div>';
+    }
+
+    if (navigator.onLine) {
+      $('smartModeBadge').textContent = 'Local + Online Context';
+      const trimmed = text.trim();
+      if (!urls.length && trimmed.length >= 3 && trimmed.length <= 48 && /^[A-Za-z0-9\s\-]+$/.test(trimmed)) {
+        try {
+          const resp = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(trimmed));
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data && data.extract) {
+              onlineBox.innerHTML = '<strong>Online Context:</strong> ' + escapeHtml(data.extract.slice(0, 220)) + (data.extract.length > 220 ? '...' : '');
+            }
+          }
+        } catch (e) {}
+      }
+    } else {
+      $('smartModeBadge').textContent = 'Offline Local Analysis';
+    }
+  }
+
+  function bindEvents() {
+    document.querySelectorAll('.nav-tab').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        state.view = view;
+        document.querySelectorAll('.nav-tab').forEach((b) => {
+          b.classList.toggle('active', b === btn);
+          b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+        });
+        document.querySelectorAll('.view-panel').forEach((p) => {
+          p.classList.toggle('active', p.id === 'view-' + view);
+        });
+        if (view === 'history') loadHistory();
+      });
+    });
+
+    $('btnThemeToggle').addEventListener('click', () => {
+      state.theme = state.theme === 'dark' ? 'light' : 'dark';
+      applyTheme();
+      saveSettings();
+    });
+
+    $('btnProtocolInfo').addEventListener('click', () => $('modalGuide').classList.add('open'));
+    $('btnCloseGuide').addEventListener('click', () => $('modalGuide').classList.remove('open'));
+    $('modalGuide').addEventListener('click', (e) => {
+      if (e.target === $('modalGuide')) $('modalGuide').classList.remove('open');
+    });
+
+    $('txInput').addEventListener('input', updateTxEncoding);
+    $('btnClearTx').addEventListener('click', () => {
+      $('txInput').value = '';
+      updateTxEncoding();
+    });
+
+    $('btnToggleBinaryScope').addEventListener('click', () => {
+      state.showPayloadOnly = !state.showPayloadOnly;
+      $('btnToggleBinaryScope').textContent = state.showPayloadOnly ? 'Show Full Frame' : 'Show Payload Only';
+      updateTxEncoding();
+    });
+
+    $('btnCopyTxBinary').addEventListener('click', () => {
+      if (!state.tx.frameInfo) return;
+      const bin = state.showPayloadOnly ? state.tx.frameInfo.payloadBits : state.tx.frameInfo.fullBits;
+      copyToClipboard(bin, 'Binary data');
+    });
+
+    $('btnTxOptical').addEventListener('click', () => setTxMode('optical'));
+    $('btnTxAudio').addEventListener('click', () => setTxMode('audio'));
+    $('btnRxOptical').addEventListener('click', () => setRxMode('optical'));
+    $('btnRxAudio').addEventListener('click', () => setRxMode('audio'));
+
+    document.querySelectorAll('.preset-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = PRESETS[btn.dataset.preset];
+        if (!p) return;
+        document.querySelectorAll('.preset-btn').forEach((b) => b.classList.toggle('active', b === btn));
+        $('txOnMs').value = String(p.onMs);
+        $('txOffMs').value = String(p.offMs);
+        $('txGapMs').value = String(p.gapMs);
+        $('txSpeed').value = '1.0';
+        $('txBeepMs').value = String(p.beepMs);
+        $('txSilenceMs').value = String(p.silenceMs);
+        $('txAudioGapMs').value = String(p.audioGapMs);
+        $('rxBitSlot').value = String(state.rxMode === 'optical' ? p.onMs + p.gapMs : p.beepMs + p.audioGapMs);
+        updateRangeLabels();
+        saveSettings();
+      });
+    });
+
+    [
+      'txOnMs', 'txOffMs', 'txGapMs', 'txSpeed', 'txFreq', 'txBeepMs',
+      'txSilenceMs', 'txAudioGapMs', 'rxBrightThresh', 'rxFreq',
+      'rxAudioThresh', 'rxBitSlot', 'rxTolerance', 'rxTimeout'
+    ].forEach((id) => {
+      $(id).addEventListener('input', () => {
+        updateRangeLabels();
+        saveSettings();
+      });
+    });
+
+    $('chkScreenFlash').addEventListener('change', saveSettings);
+    $('chkSmartInterpret').addEventListener('change', () => {
+      saveSettings();
+      const txt = $('rxDecodedText').textContent;
+      if ($('rxDecodedText').classList.contains('valid')) {
+        runSmartInterpretation(txt);
+      }
+    });
+
+    $('btnTxStart').addEventListener('click', startTransmission);
+    $('btnTxPause').addEventListener('click', pauseTransmission);
+    $('btnTxResume').addEventListener('click', resumeTransmission);
+    $('btnTxStop').addEventListener('click', stopTransmission);
+
+    $('btnGrantPerms').addEventListener('click', grantPermissionsNow);
+    $('btnRxStart').addEventListener('click', startReceiver);
+    $('btnRxStop').addEventListener('click', stopReceiver);
+    $('btnRxCalibrate').addEventListener('click', startCalibration);
+    $('btnRxReset').addEventListener('click', () => resetReceiverBuffer(true));
+
+    $('rxCameraSelect').addEventListener('change', () => {
+      state.rx.selectedCameraId = $('rxCameraSelect').value;
+      if (state.rx.running && state.rxMode === 'optical') {
+        stopReceiver();
+        startReceiver();
+      }
+    });
+
+    $('cameraStage').addEventListener('click', (e) => {
+      if (!state.rx.running || state.rxMode !== 'optical') return;
+      const rect = $('cameraStage').getBoundingClientRect();
+      const x = Math.max(0.1, Math.min(0.9, (e.clientX - rect.left) / rect.width));
+      const y = Math.max(0.1, Math.min(0.9, (e.clientY - rect.top) / rect.height));
+      state.rx.roiX = x;
+      state.rx.roiY = y;
+      $('cameraReticle').style.left = (x * 100) + '%';
+      $('cameraReticle').style.top = (y * 100) + '%';
+    });
+
+    $('btnCopyRxText').addEventListener('click', () => {
+      if (!$('rxDecodedText').classList.contains('valid')) {
+        toast('No verified message to copy', 'warn');
+        return;
+      }
+      copyToClipboard($('rxDecodedText').textContent, 'Decoded message');
+    });
+
+    $('historyFilter').addEventListener('change', renderHistory);
+    $('historyList').addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      if (btn.dataset.reuse !== undefined) {
+        $('txInput').value = btn.dataset.reuse;
+        updateTxEncoding();
+        document.querySelector('.nav-tab[data-view="tx"]').click();
+        toast('Message loaded into Transmitter', 'ok');
+      } else if (btn.dataset.copy !== undefined) {
+        copyToClipboard(btn.dataset.copy, 'Message');
+      }
+    });
+
+    $('btnClearHistory').addEventListener('click', () => $('modalConfirm').classList.add('open'));
+    $('btnConfirmCancel').addEventListener('click', () => $('modalConfirm').classList.remove('open'));
+    $('btnConfirmOk').addEventListener('click', async () => {
+      $('modalConfirm').classList.remove('open');
+      await clearHistoryDB();
+      toast('History cleared', 'ok');
+    });
+
+    window.addEventListener('online', updateEnvironmentStatus);
+    window.addEventListener('offline', updateEnvironmentStatus);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (state.tx.running) stopTransmission();
+        if (state.rx.running) stopReceiver();
+      }
+    });
+    window.addEventListener('beforeunload', () => {
+      releaseTxHardwareSync();
+      stopReceiver();
+    });
+  }
+
+  async function init() {
+    loadSettings();
+    setTxMode(state.txMode);
+    setRxMode(state.rxMode);
+    updateRangeLabels();
+    updateEnvironmentStatus();
+    bindEvents();
+    startAmbientCanvasLoop();
+    await queryBrowserPermissions();
+    await initDB();
+    await loadHistory();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
