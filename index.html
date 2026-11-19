@@ -1221,6 +1221,14 @@ input[type="range"] {
           <select id="txRepeat" style="padding:7px 10px;font-size:0.84rem;"><option value="1">1x</option><option value="2" selected>2x</option><option value="3">3x</option></select>
         </div>
 
+        <div class="toggle-row">
+          <div>
+            <div style="font-size:0.86rem;font-weight:700;">Loss Recovery (Reed-Solomon FEC)</div>
+            <div style="font-size:0.76rem;color:var(--text-muted);">Adds repair bytes like a QR code so lost or unreadable data can be rebuilt. More recovery = longer flash time</div>
+          </div>
+          <select id="txFec" style="padding:7px 10px;font-size:0.84rem;"><option value="0">Off</option><option value="1">Light (~10-15% loss)</option><option value="2" selected>Medium (~20-30% loss)</option><option value="3">Strong (~30-40% loss)</option></select>
+        </div>
+
         <div class="alert-box warn" id="txTorchAlert"></div>
 
         <div class="screen-emitter" id="screenEmitter">OPTICAL EMITTER READY</div>
@@ -1627,32 +1635,235 @@ input[type="range"] {
     return diff;
   }
 
-  function encodeFrame(text) {
-    const encoder = new TextEncoder();
-    const payloadBytes = encoder.encode(text);
+  const GF_EXP = new Uint8Array(512);
+  const GF_LOG = new Uint8Array(256);
+  (() => {
+    let x = 1;
+    for (let i = 0; i < 255; i++) {
+      GF_EXP[i] = x;
+      GF_LOG[x] = i;
+      x <<= 1;
+      if (x & 256) x ^= 0x11d;
+    }
+    for (let i = 255; i < 512; i++) GF_EXP[i] = GF_EXP[i - 255];
+  })();
+  const gfMul = (a, b) => (a && b ? GF_EXP[GF_LOG[a] + GF_LOG[b]] : 0);
+  const gfDiv = (a, b) => (a === 0 ? 0 : GF_EXP[(GF_LOG[a] + 255 - GF_LOG[b]) % 255]);
+  const gfInv = (a) => GF_EXP[255 - GF_LOG[a]];
+  const gfPow2 = (p) => GF_EXP[((p % 255) + 255) % 255];
+
+  function pMul(p, q) {
+    const r = new Array(p.length + q.length - 1).fill(0);
+    for (let j = 0; j < q.length; j++) for (let i = 0; i < p.length; i++) r[i + j] ^= gfMul(p[i], q[j]);
+    return r;
+  }
+
+  function pScale(p, x) {
+    return p.map((c) => gfMul(c, x));
+  }
+
+  function pAdd(p, q) {
+    const r = new Array(Math.max(p.length, q.length)).fill(0);
+    for (let i = 0; i < p.length; i++) r[i + r.length - p.length] = p[i];
+    for (let i = 0; i < q.length; i++) r[i + r.length - q.length] ^= q[i];
+    return r;
+  }
+
+  function pEval(p, x) {
+    let y = p[0];
+    for (let i = 1; i < p.length; i++) y = gfMul(y, x) ^ p[i];
+    return y;
+  }
+
+  function pRemainder(dividend, divisor) {
+    const out = dividend.slice();
+    const lim = dividend.length - (divisor.length - 1);
+    for (let i = 0; i < lim; i++) {
+      const coef = out[i];
+      if (coef) for (let j = 1; j < divisor.length; j++) if (divisor[j]) out[i + j] ^= gfMul(divisor[j], coef);
+    }
+    return out.slice(lim);
+  }
+
+  function rsEncode(data, nsym) {
+    let g = [1];
+    for (let i = 0; i < nsym; i++) g = pMul(g, [1, GF_EXP[i]]);
+    const out = Array.from(data).concat(new Array(nsym).fill(0));
+    for (let i = 0; i < data.length; i++) {
+      const coef = out[i];
+      if (coef) for (let j = 1; j < g.length; j++) out[i + j] ^= gfMul(g[j], coef);
+    }
+    for (let i = 0; i < data.length; i++) out[i] = data[i];
+    return out;
+  }
+
+  function rsSyndromes(msg, nsym) {
+    const s = [0];
+    for (let i = 0; i < nsym; i++) s.push(pEval(msg, GF_EXP[i]));
+    return s;
+  }
+
+  function rsDecode(received, nsym, erasePos) {
+    const msg = Array.from(received);
+    erasePos.forEach((p) => {
+      msg[p] = 0;
+    });
+    if (erasePos.length > nsym) return null;
+    const synd = rsSyndromes(msg, nsym);
+    if (Math.max(...synd) === 0) return msg.slice(0, msg.length - nsym);
+    const nmess = msg.length;
+    const fsynd = synd.slice(1);
+    for (let i = 0; i < erasePos.length; i++) {
+      const x = gfPow2(nmess - 1 - erasePos[i]);
+      for (let j = 0; j < fsynd.length - 1; j++) fsynd[j] = gfMul(fsynd[j], x) ^ fsynd[j + 1];
+    }
+    const ec = erasePos.length;
+    let errLoc = [1];
+    let oldLoc = [1];
+    for (let i = 0; i < nsym - ec; i++) {
+      let delta = fsynd[i];
+      for (let j = 1; j < errLoc.length; j++) delta ^= gfMul(errLoc[errLoc.length - 1 - j], fsynd[i - j]);
+      oldLoc = oldLoc.concat([0]);
+      if (delta !== 0) {
+        if (oldLoc.length > errLoc.length) {
+          const nl = pScale(oldLoc, delta);
+          oldLoc = pScale(errLoc, gfInv(delta));
+          errLoc = nl;
+        }
+        errLoc = pAdd(errLoc, pScale(oldLoc, delta));
+      }
+    }
+    while (errLoc.length && errLoc[0] === 0) errLoc.shift();
+    const errs = errLoc.length - 1;
+    if ((errs - ec) * 2 + ec > nsym) return null;
+    const rev = errLoc.slice().reverse();
+    const errPos = [];
+    for (let i = 0; i < nmess; i++) if (pEval(rev, gfPow2(i)) === 0) errPos.push(nmess - 1 - i);
+    if (errPos.length !== errs) return null;
+    const all = erasePos.concat(errPos);
+    const coefPos = all.map((p) => nmess - 1 - p);
+    let eloc = [1];
+    coefPos.forEach((c) => {
+      eloc = pMul(eloc, pAdd([1], [gfPow2(c), 0]));
+    });
+    const prod = pMul(synd.slice().reverse(), eloc);
+    const divisor = [1].concat(new Array(eloc.length).fill(0));
+    const rem = pRemainder(prod, divisor);
+    const eeval = rem.slice().reverse();
+    const X = coefPos.map((c) => gfPow2(c));
+    const E = new Array(nmess).fill(0);
+    for (let i = 0; i < X.length; i++) {
+      const xi = X[i];
+      const xinv = gfInv(xi);
+      let lp = 1;
+      for (let j = 0; j < X.length; j++) if (j !== i) lp = gfMul(lp, 1 ^ gfMul(xinv, X[j]));
+      if (lp === 0) return null;
+      let y = pEval(eeval.slice().reverse(), xinv);
+      y = gfMul(xi, y);
+      E[all[i]] = gfDiv(y, lp);
+    }
+    const fixed = pAdd(msg, E);
+    const chk = rsSyndromes(fixed, nsym);
+    if (Math.max(...chk) !== 0) return null;
+    return fixed.slice(0, fixed.length - nsym);
+  }
+
+  function fecLayout(len, code) {
+    const p = [0, 0.25, 0.4, 0.55][code] || 0.25;
+    const kd = len + 2;
+    const kmax = Math.max(1, Math.floor(255 * (1 - p)));
+    const B = Math.ceil(kd / kmax);
+    const kb = Math.ceil(kd / B);
+    const nsym = Math.max(2, Math.ceil((kb * p) / (1 - p)));
+    return { B, kb, nsym, n: kb + nsym, total: B * (kb + nsym) };
+  }
+
+  function fecEncodeBody(payload, crc, layout) {
+    const { B, kb, nsym, n } = layout;
+    const data = new Uint8Array(B * kb);
+    data.set(payload, 0);
+    data[payload.length] = (crc >> 8) & 255;
+    data[payload.length + 1] = crc & 255;
+    const blocks = [];
+    for (let b = 0; b < B; b++) blocks.push(rsEncode(data.subarray(b * kb, (b + 1) * kb), nsym));
+    const out = new Uint8Array(B * n);
+    for (let i = 0; i < n; i++) for (let b = 0; b < B; b++) out[i * B + b] = blocks[b][i];
+    return out;
+  }
+
+  function fecDecodeBody(cb, conf, layout, len, field) {
+    const { B, kb, nsym, n } = layout;
+    const data = new Uint8Array(B * kb);
+    let fixed = 0;
+    let erased = 0;
+    for (let b = 0; b < B; b++) {
+      const rcv = [];
+      const cf = [];
+      for (let i = 0; i < n; i++) {
+        rcv.push(cb[i * B + b]);
+        cf.push(conf[i * B + b]);
+      }
+      const order = [];
+      for (let i = 0; i < n; i++) order.push(i);
+      order.sort((x, y) => cf[x] - cf[y]);
+      let dec = null;
+      let used = 0;
+      for (const thr of [0.12, 0, -2]) {
+        const er = [];
+        for (const i of order) if (cf[i] < thr && er.length < nsym) er.push(i);
+        dec = rsDecode(rcv, nsym, er);
+        if (dec) {
+          used = er.length;
+          break;
+        }
+      }
+      if (!dec) return null;
+      for (let i = 0; i < kb; i++) if (dec[i] !== rcv[i]) fixed++;
+      erased += used;
+      data.set(dec, b * kb);
+    }
+    const payload = data.slice(0, len);
+    const crc = (data[len] << 8) | data[len + 1];
+    const buf = new Uint8Array(2 + len);
+    buf[0] = (field >> 8) & 255;
+    buf[1] = field & 255;
+    buf.set(payload, 2);
+    if (crc16ccitt(buf) !== crc) return null;
+    return { bytes: payload, crc, fixed, erased };
+  }
+
+  function encodeFrame(text, fecCode = 0) {
+    const payloadBytes = new TextEncoder().encode(text);
     const len = payloadBytes.length;
+    const field = (fecCode << 13) | len;
     const headerAndPayload = new Uint8Array(2 + len);
-    headerAndPayload[0] = (len >> 8) & 0xFF;
-    headerAndPayload[1] = len & 0xFF;
+    headerAndPayload[0] = (field >> 8) & 0xFF;
+    headerAndPayload[1] = field & 0xFF;
     headerAndPayload.set(payloadBytes, 2);
     const crc = crc16ccitt(headerAndPayload);
-
-    const lenBits = uint16ToBits(len);
     let payloadBits = '';
-    for (let i = 0; i < payloadBytes.length; i++) {
-      payloadBits += byteToBits(payloadBytes[i]);
-    }
+    for (let i = 0; i < payloadBytes.length; i++) payloadBits += byteToBits(payloadBytes[i]);
     const crcBits = uint16ToBits(crc);
-    const fullBits = PREAMBLE + SOF + lenBits + payloadBits + crcBits + MORSE_SK_END;
-
+    let lenBits = uint16ToBits(field);
+    let bodyBits = payloadBits;
+    let tailBits = crcBits;
+    let layout = null;
+    if (fecCode) {
+      layout = fecLayout(len, fecCode);
+      const coded = fecEncodeBody(payloadBytes, crc, layout);
+      bodyBits = '';
+      for (let i = 0; i < coded.length; i++) bodyBits += byteToBits(coded[i]);
+      lenBits = lenBits.repeat(3);
+      tailBits = '';
+    }
+    const fullBits = PREAMBLE + SOF + lenBits + bodyBits + tailBits + MORSE_SK_END;
     const sections = [];
     for (let i = 0; i < PREAMBLE.length; i++) sections.push('Preamble');
     for (let i = 0; i < SOF.length; i++) sections.push('SOF');
     for (let i = 0; i < lenBits.length; i++) sections.push('Length');
-    for (let i = 0; i < payloadBits.length; i++) sections.push('Payload');
-    for (let i = 0; i < crcBits.length; i++) sections.push('CRC-16');
+    for (let i = 0; i < bodyBits.length; i++) sections.push(fecCode ? 'Payload+FEC' : 'Payload');
+    for (let i = 0; i < tailBits.length; i++) sections.push('CRC-16');
     for (let i = 0; i < MORSE_SK_END.length; i++) sections.push('Morse SK End');
-
     return {
       text,
       payloadBytes,
@@ -1663,9 +1874,13 @@ input[type="range"] {
       crcHex: '0x' + crc.toString(16).toUpperCase().padStart(4, '0'),
       lenBits,
       payloadBits,
+      bodyBits,
+      tailBits,
       crcBits,
       fullBits,
-      sections
+      sections,
+      fecCode,
+      layout
     };
   }
 
@@ -1676,7 +1891,8 @@ input[type="range"] {
       rxBrightThresh: Number($('rxBrightThresh').value),
       rxTimeout: Number($('rxTimeout').value),
       chkSmartInterpret: $('chkSmartInterpret').checked,
-      txRepeat: Number($('txRepeat').value)
+      txRepeat: Number($('txRepeat').value),
+      txFec: Number($('txFec').value)
     };
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
@@ -1699,6 +1915,7 @@ input[type="range"] {
         $('rxTimeout').value = String(saved.rxTimeout);
       }
       if (typeof saved.txRepeat === 'number' && saved.txRepeat >= 1 && saved.txRepeat <= 3) $('txRepeat').value = String(saved.txRepeat);
+      if (typeof saved.txFec === 'number' && saved.txFec >= 0 && saved.txFec <= 3) $('txFec').value = String(saved.txFec);
       if (typeof saved.chkScreenFlash === 'boolean') $('chkScreenFlash').checked = saved.chkScreenFlash;
       if (typeof saved.chkSmartInterpret === 'boolean') $('chkSmartInterpret').checked = saved.chkSmartInterpret;
     } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
@@ -2096,7 +2313,7 @@ input[type="range"] {
       return;
     }
 
-    const frame = encodeFrame(text);
+    const frame = encodeFrame(text, Number($('txFec').value) || 0);
     state.tx.frameInfo = frame;
 
     $('txByteCount').textContent = String(frame.len);
@@ -2107,7 +2324,7 @@ input[type="range"] {
 
     const totalSec = (WAKE_ON_MS + WAKE_OFF_MS + frame.fullBits.length * BIT_MS) / 1000;
     $('txEstTime').textContent = totalSec.toFixed(1) + 's';
-    $('txFrameBadge').textContent = '0.1s/bit (' + frame.fullBits.length + ' bits + SK)';
+    $('txFrameBadge').textContent = '0.1s/bit (' + frame.fullBits.length + ' bits + SK)' + (frame.fecCode ? ' · FEC +' + [0, 25, 40, 55][frame.fecCode] + '% repair' : '');
     $('txFrameBadge').className = 'badge info';
 
     if (!state.showFullFrame) {
@@ -2117,8 +2334,8 @@ input[type="range"] {
         '<span class="bit-seg-pre">[WAKE 0.3s] ' + PREAMBLE + '</span> ' +
         '<span class="bit-seg-sof">' + SOF + '</span> ' +
         '<span class="bit-seg-len">' + frame.lenBits + '</span> ' +
-        '<span class="bit-seg-pay">' + frame.payloadBits.replace(/(.{8})/g, '$1 ').trim() + '</span> ' +
-        '<span class="bit-seg-crc">' + frame.crcBits + '</span> ' +
+        '<span class="bit-seg-pay">' + frame.bodyBits.replace(/(.{8})/g, '$1 ').trim() + '</span> ' +
+        '<span class="bit-seg-crc">' + frame.tailBits + '</span> ' +
         '<span class="bit-seg-morse">[SK: ' + MORSE_SK_END + ']</span>';
     }
   }
@@ -2308,7 +2525,7 @@ input[type="range"] {
       stopReceiver();
     }
 
-    const frame = encodeFrame(text);
+    const frame = encodeFrame(text, Number($('txFec').value) || 0);
     state.tx.frameInfo = frame;
     state.tx.bits = frame.fullBits;
     state.tx.sections = frame.sections;
@@ -2901,14 +3118,98 @@ input[type="range"] {
     };
     const last = ts[n - 1];
     let sawTrunc = false;
+    const nl = new Float32Array(n);
+    for (let i = 0; i < n; i++) nl[i] = Math.min(1, Math.max(0, (lv[i] - lo) / range));
+    const soft = (t, from, to) => {
+      const a = lb(t + from);
+      const b = lb(t + to);
+      if (b <= a) return NaN;
+      let s = 0;
+      for (let i = a; i < b; i++) s += nl[i];
+      return s / (b - a);
+    };
+    const readFec = (t0, P, mis, bitAt, f1) => {
+      const rd = (st) => {
+        let v = 0;
+        for (let k = st; k < st + 16; k++) v = (v << 1) | bitAt(k);
+        return v;
+      };
+      const f2 = rd(32);
+      const f3 = rd(48);
+      const maj = (f1 & f2) | (f1 & f3) | (f2 & f3);
+      const pc = (v) => {
+        let c = 0;
+        while (v) {
+          c += v & 1;
+          v >>= 1;
+        }
+        return c;
+      };
+      const hd = pc(f1 ^ maj) + pc(f2 ^ maj) + pc(f3 ^ maj);
+      const cands = [maj, f1, f2, f3].filter((v, i, a) => a.indexOf(v) === i);
+      let best = null;
+      for (const f of cands) {
+        const c = f >> 13;
+        const l = f & 8191;
+        if (c < 1 || c > 3 || l < 1 || l > 4096) continue;
+        const layout = fecLayout(l, c);
+        const start = 64;
+        const tot = start + layout.total * 8 + MORSE_SK_END.length;
+        if (t0 + (tot - 2) * P > last + 150) {
+          sawTrunc = true;
+          continue;
+        }
+        const cb = new Uint8Array(layout.total);
+        const conf = new Float32Array(layout.total);
+        for (let i = 0; i < layout.total; i++) {
+          let v = 0;
+          let cf = 9;
+          for (let j = 0; j < 8; j++) {
+            const m = soft(t0 + (start + i * 8 + j) * P, 10, Math.round(P * 0.62));
+            if (Number.isNaN(m)) {
+              cf = -1;
+              v <<= 1;
+            } else {
+              v = (v << 1) | (m >= 0.5 ? 1 : 0);
+              cf = Math.min(cf, Math.abs(m - 0.5));
+            }
+          }
+          cb[i] = v;
+          conf[i] = cf;
+        }
+        let runStart = -1;
+        for (let bit = 0; bit <= layout.total * 8; bit++) {
+          const one = bit < layout.total * 8 && ((cb[bit >> 3] >> (7 - (bit & 7))) & 1) === 1;
+          if (!one && bit < layout.total * 8) {
+            if (runStart < 0) runStart = bit;
+          } else if (runStart >= 0) {
+            if (bit - runStart >= 12) for (let q = runStart >> 3; q <= (bit - 1) >> 3; q++) conf[q] = -1;
+            runStart = -1;
+          }
+        }
+        for (let i = 0; i < layout.total; i++) if (cb[i] === 0) conf[i] = -1;
+        let weak = 0;
+        for (let i = 0; i < layout.total; i++) if (conf[i] < 0.12) weak++;
+        let skm = 0;
+        for (let j = 0; j < MORSE_SK_END.length; j++) {
+          if (String(bitAt(start + layout.total * 8 + j)) !== MORSE_SK_END[j]) skm++;
+        }
+        const dec = fecDecodeBody(cb, conf, layout, l, f);
+        const r = { fec: true, t0, t1: t0 + tot * P, P, len: l, code: c, field: f, cb, conf, layout, mis, skm, score: mis * 4 + hd + weak / 100, ok: Boolean(dec), bytes: dec ? dec.bytes : null, crc: dec ? dec.crc : 0, fixed: dec ? dec.fixed : 0, erased: dec ? dec.erased : 0 };
+        if (dec) return r;
+        if (!best || r.score < best.score) best = r;
+      }
+      return best;
+    };
     const readFrame = (t0, P) => {
       const bitAt = (k) => (avg(t0 + k * P, 10, Math.round(P * 0.62)) >= 0.5 ? 1 : 0);
       let mis = 0;
       for (let k = 0; k < 16; k++) {
-        if (String(bitAt(k)) !== SYNC_PATTERN[k] && ++mis > 1) return null;
+        if (String(bitAt(k)) !== SYNC_PATTERN[k] && ++mis > 3) return null;
       }
       let len = 0;
       for (let k = 16; k < 32; k++) len = (len << 1) | bitAt(k);
+      if (len >= 8192) return readFec(t0, P, mis, bitAt, len);
       if (len < 1 || len > 4096) return null;
       const pEnd = 32 + len * 8 + 16;
       const tot = pEnd + MORSE_SK_END.length;
@@ -2923,7 +3224,7 @@ input[type="range"] {
         if (String(bitAt(pEnd + j)) !== MORSE_SK_END[j]) skm++;
       }
       const v = verifyBits(pbits, len);
-      return { t0, t1: t0 + tot * P, P, len, pbits, mis, skm, ok: Boolean(v) && skm <= 3, bytes: v ? v.bytes : null, crc: v ? v.crc : 0 };
+      return { fec: false, score: skm + mis, t0, t1: t0 + tot * P, P, len, pbits, mis, skm, ok: Boolean(v) && skm <= 3, bytes: v ? v.bytes : null, crc: v ? v.crc : 0 };
     };
 
     const bases = [];
@@ -2955,7 +3256,7 @@ input[type="range"] {
             found = r;
             break outer;
           }
-          if (!best || r.skm + r.mis < best.skm + best.mis) best = r;
+          if (!best || r.score < best.score) best = r;
         }
       }
       if (found) oks.push(found);
@@ -2968,7 +3269,7 @@ input[type="range"] {
       if (oks.some((o) => p.t0 >= o.t0 - 600 && p.t0 <= o.t1)) continue;
       const prev = uniq[uniq.length - 1];
       if (prev && p.t0 - prev.t0 < 600) {
-        if (p.skm + p.mis < prev.skm + prev.mis) uniq[uniq.length - 1] = p;
+        if (p.score < prev.score) uniq[uniq.length - 1] = p;
       } else {
         uniq.push(p);
       }
@@ -2976,9 +3277,37 @@ input[type="range"] {
 
     let voted = false;
     let pool = oks;
-    if (!oks.length && uniq.length >= 2) {
+    if (!oks.length) {
+      const fg = {};
+      uniq.filter((p) => p.fec).forEach((p) => {
+        (fg[p.field] = fg[p.field] || []).push(p);
+      });
+      for (const key of Object.keys(fg)) {
+        const g = fg[key];
+        if (g.length < 2) continue;
+        const layout = g[0].layout;
+        const cb = new Uint8Array(layout.total);
+        const conf = new Float32Array(layout.total).fill(-1);
+        for (let i = 0; i < layout.total; i++) {
+          for (const p of g) {
+            if (p.conf[i] > conf[i]) {
+              conf[i] = p.conf[i];
+              cb[i] = p.cb[i];
+            }
+          }
+        }
+        const dec = fecDecodeBody(cb, conf, layout, g[0].len, g[0].field);
+        if (dec) {
+          pool = [{ t0: g[0].t0, P: g[0].P, len: g[0].len, code: g[0].code, bytes: dec.bytes, crc: dec.crc, skm: 0, fixed: dec.fixed, erased: dec.erased }];
+          pool.groupSize = g.length;
+          voted = true;
+          break;
+        }
+      }
+    }
+    if (!oks.length && !voted && uniq.length >= 2) {
       const byLen = {};
-      uniq.forEach((p) => {
+      uniq.filter((p) => !p.fec).forEach((p) => {
         (byLen[p.len] = byLen[p.len] || []).push(p);
       });
       for (const key of Object.keys(byLen)) {
@@ -3016,11 +3345,7 @@ input[type="range"] {
     const matched = voted ? pool.groupSize : chosen.list.length;
     const bursts = voted ? pool.groupSize : oks.length + uniq.length;
 
-    let payloadBits = '';
-    pick.bytes.forEach((b) => {
-      payloadBits += byteToBits(b);
-    });
-    const fullBits = SYNC_PATTERN + uint16ToBits(pick.len) + payloadBits + uint16ToBits(pick.crc) + MORSE_SK_END;
+    const fullBits = encodeFrame(new TextDecoder().decode(pick.bytes), pick.code || 0).fullBits;
     const rows = [];
     const cap = Math.min(fullBits.length, 400);
     for (let k = 0; k < cap; k++) {
@@ -3036,7 +3361,7 @@ input[type="range"] {
     }
     if (fullBits.length > cap) lines.push('... ' + (fullBits.length - cap) + ' more slots');
 
-    return { ok: true, bytes: pick.bytes, crc: pick.crc, len: pick.len, matched, bursts, voted, range, slotLog: lines.join('\n') };
+    return { ok: true, bytes: pick.bytes, crc: pick.crc, len: pick.len, matched, bursts, voted, range, fec: pick.code ? { code: pick.code, fixed: pick.fixed || 0, erased: pick.erased || 0 } : null, slotLog: lines.join('\n') };
   }
 
   function resetRxSession() {
@@ -3069,7 +3394,7 @@ input[type="range"] {
     $('rxDecodedText').className = 'decoded-output valid';
     $('rxHexOutput').textContent = hexStr;
     $('rxOctOutput').textContent = octStr;
-    $('rxCrcBadge').textContent = 'CRC-16 + Morse SK Valid';
+    $('rxCrcBadge').textContent = res.fec ? 'CRC-16 + FEC Verified' : 'CRC-16 + Morse SK Valid';
     $('rxCrcBadge').className = 'badge ok';
     $('rxBinaryStream').textContent = bin.replace(/(.{8})/g, '$1 ').trim();
     $('rxBitCount').textContent = bin.length + ' bits (Exact)';
@@ -3079,7 +3404,8 @@ input[type="range"] {
     const matchMsg = res.voted
       ? 'Recovered by cross-matching ' + res.bursts + ' repeated transmissions.'
       : 'Repeat match: ' + res.matched + ' of ' + res.bursts + ' transmission(s) identical.';
-    showRxAlert('Decoded "' + text.slice(0, 40) + '" - ' + matchMsg, 'ok');
+    const fecMsg = res.fec ? ' FEC rebuilt ' + res.fec.fixed + ' damaged byte(s); ' + res.fec.erased + ' unreadable byte(s) recovered.' : '';
+    showRxAlert('Decoded "' + text.slice(0, 40) + '" - ' + matchMsg + fecMsg, 'ok');
     toast('Received: ' + text.slice(0, 24), 'ok');
     runSmartInterpretation(text);
     addHistoryRecord({
@@ -3252,6 +3578,10 @@ input[type="range"] {
 
     $('chkScreenFlash').addEventListener('change', saveSettings);
     $('txRepeat').addEventListener('change', saveSettings);
+    $('txFec').addEventListener('change', () => {
+      saveSettings();
+      updateTxEncoding();
+    });
     $('chkSmartInterpret').addEventListener('change', () => {
       saveSettings();
       const txt = $('rxDecodedText').textContent;
