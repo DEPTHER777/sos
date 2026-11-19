@@ -1832,10 +1832,10 @@ input[type="range"] {
     return { bytes: payload, crc, fixed, erased };
   }
 
-  function encodeFrame(text, fecCode = 0) {
-    const payloadBytes = new TextEncoder().encode(text);
+  function encodeBytes(payloadBytes, fecCode, comp, text) {
     const len = payloadBytes.length;
-    const field = (fecCode << 13) | len;
+    const field = (comp ? 32768 : 0) | (fecCode << 13) | len;
+    const shown = typeof text === 'string' ? new TextEncoder().encode(text) : payloadBytes;
     const headerAndPayload = new Uint8Array(2 + len);
     headerAndPayload[0] = (field >> 8) & 0xFF;
     headerAndPayload[1] = field & 0xFF;
@@ -1865,10 +1865,12 @@ input[type="range"] {
     for (let i = 0; i < tailBits.length; i++) sections.push('CRC-16');
     for (let i = 0; i < MORSE_SK_END.length; i++) sections.push('Morse SK End');
     return {
-      text,
+      text: typeof text === 'string' ? text : '',
       payloadBytes,
-      hex: bytesToHex(payloadBytes),
-      octal: bytesToOctal(payloadBytes),
+      comp: comp ? 1 : 0,
+      rawLen: shown.length,
+      hex: bytesToHex(shown),
+      octal: bytesToOctal(shown),
       len,
       crc,
       crcHex: '0x' + crc.toString(16).toUpperCase().padStart(4, '0'),
@@ -1882,6 +1884,10 @@ input[type="range"] {
       fecCode,
       layout
     };
+  }
+
+  function encodeFrame(text, fecCode = 0) {
+    return encodeBytes(new TextEncoder().encode(text), fecCode, 0, text);
   }
 
   function saveSettings() {
@@ -2295,8 +2301,9 @@ input[type="range"] {
     $('rxTimerClock').textContent = clock;
   }
 
-  function updateTxEncoding() {
+  async function updateTxEncoding() {
     const text = $('txInput').value;
+    const token = (state.tx.encToken = (state.tx.encToken || 0) + 1);
     $('txCharCount').textContent = text.length + ' chars';
 
     if (!text.length) {
@@ -2313,10 +2320,11 @@ input[type="range"] {
       return;
     }
 
-    const frame = encodeFrame(text, Number($('txFec').value) || 0);
+    const frame = await buildFrame(text);
+    if (token !== state.tx.encToken) return;
     state.tx.frameInfo = frame;
 
-    $('txByteCount').textContent = String(frame.len);
+    $('txByteCount').textContent = String(frame.rawLen);
     $('txTotalBits').textContent = String(frame.payloadBits.length);
     $('txCrcHex').textContent = frame.crcHex;
     $('txHexOutput').textContent = frame.hex;
@@ -2324,7 +2332,7 @@ input[type="range"] {
 
     const totalSec = (WAKE_ON_MS + WAKE_OFF_MS + frame.fullBits.length * BIT_MS) / 1000;
     $('txEstTime').textContent = totalSec.toFixed(1) + 's';
-    $('txFrameBadge').textContent = '0.1s/bit (' + frame.fullBits.length + ' bits + SK)' + (frame.fecCode ? ' · FEC +' + [0, 25, 40, 55][frame.fecCode] + '% repair' : '');
+    $('txFrameBadge').textContent = '0.1s/bit (' + frame.fullBits.length + ' bits + SK)' + (frame.comp ? ' · packed ' + frame.rawLen + '→' + frame.len + 'B' : '') + (frame.fecCode ? ' · FEC +' + [0, 25, 40, 55][frame.fecCode] + '% repair' : '');
     $('txFrameBadge').className = 'badge info';
 
     if (!state.showFullFrame) {
@@ -2525,7 +2533,7 @@ input[type="range"] {
       stopReceiver();
     }
 
-    const frame = encodeFrame(text, Number($('txFec').value) || 0);
+    const frame = await buildFrame(text);
     state.tx.frameInfo = frame;
     state.tx.bits = frame.fullBits;
     state.tx.sections = frame.sections;
@@ -3043,7 +3051,40 @@ input[type="range"] {
     }
   }
 
-  function verifyBits(pbits, len) {
+  async function packText(text) {
+    const raw = new TextEncoder().encode(text);
+    if (raw.length < 48 || typeof CompressionStream === 'undefined') return null;
+    if (state.tx.packCache && state.tx.packCache.text === text) return state.tx.packCache.out;
+    let out = null;
+    try {
+      const cs = new CompressionStream('deflate-raw');
+      const w = cs.writable.getWriter();
+      w.write(raw);
+      w.close();
+      const packed = new Uint8Array(await new Response(cs.readable).arrayBuffer());
+      out = packed.length < raw.length * 0.92 ? packed : null;
+    } catch (e) {
+      out = null;
+    }
+    state.tx.packCache = { text, out };
+    return out;
+  }
+
+  async function unpackBytes(bytes) {
+    const ds = new DecompressionStream('deflate-raw');
+    const w = ds.writable.getWriter();
+    w.write(bytes);
+    w.close();
+    return new Uint8Array(await new Response(ds.readable).arrayBuffer());
+  }
+
+  async function buildFrame(text) {
+    const fec = Number($('txFec').value) || 0;
+    const packed = await packText(text);
+    return packed ? encodeBytes(packed, fec, 1, text) : encodeFrame(text, fec);
+  }
+
+  function verifyBits(pbits, len, field) {
     const bytes = new Uint8Array(len);
     for (let i = 0; i < len; i++) {
       let v = 0;
@@ -3053,8 +3094,8 @@ input[type="range"] {
     let rxCrc = 0;
     for (let j = 0; j < 16; j++) rxCrc = (rxCrc << 1) | pbits[len * 8 + j];
     const buf = new Uint8Array(2 + len);
-    buf[0] = (len >> 8) & 255;
-    buf[1] = len & 255;
+    buf[0] = (field >> 8) & 255;
+    buf[1] = field & 255;
     buf.set(bytes, 2);
     return crc16ccitt(buf) === rxCrc ? { bytes, crc: rxCrc } : null;
   }
@@ -3073,7 +3114,7 @@ input[type="range"] {
     if (dis.length > 14) return null;
     for (let mask = 0; mask < (1 << dis.length); mask++) {
       for (let j = 0; j < dis.length; j++) base[dis[j]] = (mask >> j) & 1;
-      const v = verifyBits(base, group[0].len);
+      const v = verifyBits(base, group[0].len, group[0].field);
       if (v) return v;
     }
     return null;
@@ -3149,7 +3190,7 @@ input[type="range"] {
       const cands = [maj, f1, f2, f3].filter((v, i, a) => a.indexOf(v) === i);
       let best = null;
       for (const f of cands) {
-        const c = f >> 13;
+        const c = (f >> 13) & 3;
         const l = f & 8191;
         if (c < 1 || c > 3 || l < 1 || l > 4096) continue;
         const layout = fecLayout(l, c);
@@ -3195,7 +3236,7 @@ input[type="range"] {
           if (String(bitAt(start + layout.total * 8 + j)) !== MORSE_SK_END[j]) skm++;
         }
         const dec = fecDecodeBody(cb, conf, layout, l, f);
-        const r = { fec: true, t0, t1: t0 + tot * P, P, len: l, code: c, field: f, cb, conf, layout, mis, skm, score: mis * 4 + hd + weak / 100, ok: Boolean(dec), bytes: dec ? dec.bytes : null, crc: dec ? dec.crc : 0, fixed: dec ? dec.fixed : 0, erased: dec ? dec.erased : 0 };
+        const r = { fec: true, comp: f >> 15, t0, t1: t0 + tot * P, P, len: l, code: c, field: f, cb, conf, layout, mis, skm, score: mis * 4 + hd + weak / 100, ok: Boolean(dec), bytes: dec ? dec.bytes : null, crc: dec ? dec.crc : 0, fixed: dec ? dec.fixed : 0, erased: dec ? dec.erased : 0 };
         if (dec) return r;
         if (!best || r.score < best.score) best = r;
       }
@@ -3207,9 +3248,11 @@ input[type="range"] {
       for (let k = 0; k < 16; k++) {
         if (String(bitAt(k)) !== SYNC_PATTERN[k] && ++mis > 3) return null;
       }
-      let len = 0;
-      for (let k = 16; k < 32; k++) len = (len << 1) | bitAt(k);
-      if (len >= 8192) return readFec(t0, P, mis, bitAt, len);
+      let field = 0;
+      for (let k = 16; k < 32; k++) field = (field << 1) | bitAt(k);
+      if ((field >> 13) & 3) return readFec(t0, P, mis, bitAt, field);
+      const comp = field >> 15;
+      const len = field & 8191;
       if (len < 1 || len > 4096) return null;
       const pEnd = 32 + len * 8 + 16;
       const tot = pEnd + MORSE_SK_END.length;
@@ -3223,8 +3266,8 @@ input[type="range"] {
       for (let j = 0; j < MORSE_SK_END.length; j++) {
         if (String(bitAt(pEnd + j)) !== MORSE_SK_END[j]) skm++;
       }
-      const v = verifyBits(pbits, len);
-      return { fec: false, score: skm + mis, t0, t1: t0 + tot * P, P, len, pbits, mis, skm, ok: Boolean(v) && skm <= 3, bytes: v ? v.bytes : null, crc: v ? v.crc : 0 };
+      const v = verifyBits(pbits, len, field);
+      return { fec: false, field, comp, score: skm + mis, t0, t1: t0 + tot * P, P, len, pbits, mis, skm, ok: Boolean(v) && skm <= 3, bytes: v ? v.bytes : null, crc: v ? v.crc : 0 };
     };
 
     const bases = [];
@@ -3298,7 +3341,7 @@ input[type="range"] {
         }
         const dec = fecDecodeBody(cb, conf, layout, g[0].len, g[0].field);
         if (dec) {
-          pool = [{ t0: g[0].t0, P: g[0].P, len: g[0].len, code: g[0].code, bytes: dec.bytes, crc: dec.crc, skm: 0, fixed: dec.fixed, erased: dec.erased }];
+          pool = [{ t0: g[0].t0, P: g[0].P, len: g[0].len, comp: g[0].comp, code: g[0].code, bytes: dec.bytes, crc: dec.crc, skm: 0, fixed: dec.fixed, erased: dec.erased }];
           pool.groupSize = g.length;
           voted = true;
           break;
@@ -3308,14 +3351,14 @@ input[type="range"] {
     if (!oks.length && !voted && uniq.length >= 2) {
       const byLen = {};
       uniq.filter((p) => !p.fec).forEach((p) => {
-        (byLen[p.len] = byLen[p.len] || []).push(p);
+        (byLen[p.field] = byLen[p.field] || []).push(p);
       });
       for (const key of Object.keys(byLen)) {
         if (byLen[key].length < 2) continue;
         const v = voteParts(byLen[key]);
         if (v) {
           const g = byLen[key][0];
-          pool = [{ t0: g.t0, P: g.P, len: g.len, bytes: v.bytes, crc: v.crc, skm: 0 }];
+          pool = [{ t0: g.t0, P: g.P, len: g.len, field: g.field, comp: g.comp, bytes: v.bytes, crc: v.crc, skm: 0 }];
           pool.groupSize = byLen[key].length;
           voted = true;
           break;
@@ -3345,7 +3388,7 @@ input[type="range"] {
     const matched = voted ? pool.groupSize : chosen.list.length;
     const bursts = voted ? pool.groupSize : oks.length + uniq.length;
 
-    const fullBits = encodeFrame(new TextDecoder().decode(pick.bytes), pick.code || 0).fullBits;
+    const fullBits = encodeBytes(pick.bytes, pick.code || 0, pick.comp || 0).fullBits;
     const rows = [];
     const cap = Math.min(fullBits.length, 400);
     for (let k = 0; k < cap; k++) {
@@ -3361,7 +3404,7 @@ input[type="range"] {
     }
     if (fullBits.length > cap) lines.push('... ' + (fullBits.length - cap) + ' more slots');
 
-    return { ok: true, bytes: pick.bytes, crc: pick.crc, len: pick.len, matched, bursts, voted, range, fec: pick.code ? { code: pick.code, fixed: pick.fixed || 0, erased: pick.erased || 0 } : null, slotLog: lines.join('\n') };
+    return { ok: true, comp: pick.comp || 0, bytes: pick.bytes, crc: pick.crc, len: pick.len, matched, bursts, voted, range, fec: pick.code ? { code: pick.code, fixed: pick.fixed || 0, erased: pick.erased || 0 } : null, slotLog: lines.join('\n') };
   }
 
   function resetRxSession() {
@@ -3373,23 +3416,32 @@ input[type="range"] {
     rx.idleNotified = false;
   }
 
-  function finishSuccess(res) {
+  async function finishSuccess(res) {
+    resetRxSession();
+    stopReceiver();
+    let bytes = res.bytes;
+    if (res.comp) {
+      try {
+        bytes = await unpackBytes(bytes);
+      } catch (e) {
+        finishFail({ ok: false, reason: 'Packed data verified but could not be unpacked on this browser.' });
+        return;
+      }
+    }
     let text;
     try {
-      text = new TextDecoder('utf-8', { fatal: true }).decode(res.bytes);
+      text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
     } catch (e) {
       finishFail({ ok: false, reason: 'UTF-8 decoding failed on received bytes.' });
       return;
     }
-    const hexStr = bytesToHex(res.bytes);
-    const octStr = bytesToOctal(res.bytes);
+    const hexStr = bytesToHex(bytes);
+    const octStr = bytesToOctal(bytes);
     let bin = '';
-    res.bytes.forEach((b) => {
+    bytes.forEach((b) => {
       bin += byteToBits(b);
     });
     const crcHex = '0x' + res.crc.toString(16).toUpperCase().padStart(4, '0');
-    resetRxSession();
-    stopReceiver();
     $('rxDecodedText').textContent = text;
     $('rxDecodedText').className = 'decoded-output valid';
     $('rxHexOutput').textContent = hexStr;
@@ -3400,7 +3452,7 @@ input[type="range"] {
     $('rxBitCount').textContent = bin.length + ' bits (Exact)';
     $('rxFlashLog').textContent = 'Per-slot flash duration (bit·ms, 0 = no light detected, ideal 1·75 / 0·0)\n' + res.slotLog;
     setRxProtocolState('COMPLETED', 'ok');
-    setRxTimerBanner('', 'Message Received - Receiver Auto-Stopped', res.len + ' bytes verified (' + crcHex + ')', $('rxTimerClock').textContent);
+    setRxTimerBanner('', 'Message Received - Receiver Auto-Stopped', res.len + ' bytes verified' + (res.comp ? ' → ' + bytes.length + ' unpacked' : '') + ' (' + crcHex + ')', $('rxTimerClock').textContent);
     const matchMsg = res.voted
       ? 'Recovered by cross-matching ' + res.bursts + ' repeated transmissions.'
       : 'Repeat match: ' + res.matched + ' of ' + res.bursts + ' transmission(s) identical.';
